@@ -1,0 +1,17 @@
+[package]
+name = "async_iot_models"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[features]
+default = ["python"]
+python = ["dep:pyo3"]
+
+[dependencies]
+pyo3 = { version = "0", optional = true }
+lazy_static = "1"
+strum = { version = "0", features = ["derive"]}
+systemstat = { version = "0.2.3" }
+thiserror = { version = "1" }

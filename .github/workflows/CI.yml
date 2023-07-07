@@ -1,0 +1,91 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+      - master
+  pull_request:
+
+jobs:
+  linux:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - uses: actions/setup-python@v4
+      with:
+        python-version: '3.9'
+    - name: Pip install
+      run: |
+        python -m pip install .
+    - name: Test import
+      run: |
+        python -c "import async_iot"
+    # - name: Upload wheels
+    #   uses: actions/upload-artifact@v2
+    #   with:
+    #     name: wheels
+    #     path: dist
+
+  # windows:
+  #   runs-on: windows-latest
+  #   steps:
+  #   - uses: actions/checkout@v3
+  #   - uses: actions/setup-python@v4
+  #     with:
+  #       python-version: '3.9'
+  #   - uses: messense/maturin-action@v1
+  #     with:
+  #       command: build
+  #       args: --release -o dist --find-interpreter
+  #   - name: Pip install
+  #     run: |
+  #       python -m pip install .
+  #   - name: Test import
+  #     run: |
+  #       python -c "import async_iot"
+  #   # - name: Upload wheels
+  #   #   uses: actions/upload-artifact@v2
+  #   #   with:
+  #   #     name: wheels
+  #   #     path: dist
+
+  # macos:
+  #   runs-on: macos-latest
+  #   steps:
+  #   - uses: actions/checkout@v3
+  #   - uses: actions/setup-python@v4
+  #     with:
+  #       python-version: '3.9'
+  #   - uses: messense/maturin-action@v1
+  #     with:
+  #       command: build
+  #       args: --release -o dist --universal2 --find-interpreter
+  #   - name: Pip install
+  #     run: |
+  #       python -m pip install .
+  #   - name: Test import
+  #     run: |
+  #       python -c "import async_iot"
+  #   # - name: Upload wheels
+  #   #   uses: actions/upload-artifact@v2
+  #   #   with:
+  #   #     name: wheels
+  #   #     path: dist
+
+  # # release:
+  # #   name: Release
+  # #   runs-on: ubuntu-latest
+  # #   if: "startsWith(github.ref, 'refs/tags/')"
+  # #   needs: [ macos, windows, linux ]
+  # #   steps:
+  # #     - uses: actions/download-artifact@v2
+  # #       with:
+  # #         name: wheels
+  # #     - name: Publish to PyPI
+  # #       uses: messense/maturin-action@v1
+  # #       env:
+  # #         MATURIN_PYPI_TOKEN: $##}
+  # #       with:
+  # #         command: upload
+  # #         args: --skip-existing *
