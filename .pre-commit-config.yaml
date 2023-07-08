@@ -37,6 +37,7 @@ repos:
         name: cargo-fmt
         entry: bash -c 'cargo fmt --all'
         language: system
+        fail_fast: true
 -   repo: local
     hooks:
       - id: cargo-clippy

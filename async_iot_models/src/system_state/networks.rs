@@ -1,14 +1,17 @@
 use serde::Serialize;
+use serde_json::json;
 use std::{collections::HashMap, io};
 use systemstat::{self, data::IpAddr, NetworkAddrs, NetworkStats, Platform};
+
+use serde_json;
 
 use crate::results::ExtendedResult;
 
 /// A state for a network interface.
 #[derive(Clone, Debug, Serialize)]
 pub struct InterfaceState {
-    address_v4: Vec<NetworkAddrs>,
-    address_v6: Vec<NetworkAddrs>,
+    address_v4: Vec<serde_json::Value>,
+    address_v6: Vec<serde_json::Value>,
     stats: Option<NetworkStats>,
 }
 
@@ -24,11 +27,19 @@ impl InterfaceState {
 
         let mut warnings = Vec::new();
 
-        addrs.into_iter().for_each(|addr| match addr.addr {
-            IpAddr::V4(_) => address_v4.push(addr),
-            IpAddr::V6(_) => address_v6.push(addr),
-            _ => (),
-        });
+        addrs
+            .into_iter()
+            .for_each(|addr| match (addr.addr, addr.netmask) {
+                (IpAddr::V4(ip), IpAddr::V4(mask)) => address_v4.push(json!({
+                    "addr": ip,
+                    "mask": mask
+                })),
+                (IpAddr::V6(ip), IpAddr::V6(mask)) => address_v6.push(json!({
+                    "addr": ip,
+                    "mask": mask
+                })),
+                _ => (),
+            });
 
         let stats = match stats_result {
             Ok(stats) => Some(stats),

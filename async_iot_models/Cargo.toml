@@ -21,3 +21,4 @@ serde_json = { version = "1" }
 strum = { version = "0", features = ["derive"]}
 systemstat = { version = "0.2.3", features = ["serde"] }
 thiserror = { version = "1" }
+time = { version = "0", features = ["serde-human-readable"] }

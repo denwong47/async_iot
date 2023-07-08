@@ -13,6 +13,7 @@ dependencies = [
  "strum",
  "systemstat",
  "thiserror",
+ "time",
 ]
 
 [[package]]

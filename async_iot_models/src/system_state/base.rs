@@ -3,6 +3,7 @@ use std::collections::HashMap;
 use systemstat::{self, Platform};
 
 use serde::Serialize;
+use time::OffsetDateTime;
 
 use crate::{results, traits::ResultToOption};
 
@@ -10,6 +11,7 @@ use super::{cpu::cpu_load, networks::networks, temperatures::temperatures, Inter
 
 #[derive(Clone, Debug, Serialize)]
 pub struct SystemState {
+    _timestamp: OffsetDateTime,
     _results: HashMap<&'static str, results::ResultState>,
     cpu_load: Option<systemstat::CPULoad>,
     temperatures: Option<HashMap<&'static str, f32>>,
@@ -45,6 +47,7 @@ impl Default for SystemState {
 
         // Creates the instance.
         Self {
+            _timestamp: OffsetDateTime::now_utc(),
             _results,
             cpu_load: cpu_load.to_option(),
             temperatures: temperatures.to_option(),
