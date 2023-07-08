@@ -73,3 +73,5 @@ docs/_build/
 
 # Environment variables
 **/envfile
+**/.env
+**/.credentials.json
