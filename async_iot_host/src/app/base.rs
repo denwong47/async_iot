@@ -1,13 +1,14 @@
 use lazy_static::lazy_static;
-use std::{sync::RwLock, time::Duration};
+use std::{sync::{Arc, RwLock}, time::Duration};
 
 #[allow(unused_imports)]
 use tide::{self, prelude::*};
 
+use tokio::sync::Notify;
 use async_iot_models::{results, system_state};
 
 use super::hooks;
-use super::{system_state_task, update_system_state};
+use super::{system_state_task, update_system_state, termination_task};
 
 use crate::{config, error::AppError};
 
@@ -23,11 +24,13 @@ pub async fn runs_app(addr: &str, port: Option<u16>) -> results::ExtendedResult<
 
     // Initialize state.
     update_system_state(&SYSTEM_STATE);
+    let termination_flag = Arc::new(Notify::new());
 
     let mut app = tide::new();
     app.at("/info").get(hooks::info);
     app.at("/state")
         .get(hooks::SystemStateHook::new(&SYSTEM_STATE));
+    app.at("/terminate").get(hooks::TerminationHook::new(Arc::clone(&termination_flag)));
 
     tokio::select! {
         _ = app.listen(&listen_target) => {
@@ -37,6 +40,9 @@ pub async fn runs_app(addr: &str, port: Option<u16>) -> results::ExtendedResult<
             &SYSTEM_STATE,
             Duration::from_secs(config::SYSTEM_STATE_REFRESH_RATE),
         ) => {
+            return result
+        },
+        result = termination_task(Arc::clone(&termination_flag)) => {
             return result
         }
     }
