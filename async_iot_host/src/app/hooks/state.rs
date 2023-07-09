@@ -2,14 +2,14 @@ use std::sync::RwLock;
 
 use async_trait::async_trait;
 use http_types::mime;
-use tide::{prelude::*, Endpoint};
+use tide::{self, prelude::*, Endpoint};
 
-use async_iot_models::{logger, system_state::SystemState};
+use async_iot_models::{logger, results, system_state::SystemState};
 
 use crate::error::AppError;
 
 pub struct SystemStateHook {
-    lock: &'static RwLock<Option<SystemState>>,
+    lock: &'static RwLock<Option<results::ResultJson>>,
 }
 
 impl SystemStateHook {
@@ -17,7 +17,7 @@ impl SystemStateHook {
     /// behind a [`RwLock`].
     ///
     /// Due to the lifetime, [`lazy_static`] is needed to create the instance.
-    pub fn new(lock: &'static RwLock<Option<SystemState>>) -> Self {
+    pub fn new(lock: &'static RwLock<Option<results::ResultJson>>) -> Self {
         Self { lock }
     }
 }
@@ -28,14 +28,12 @@ where
     State: Clone + Send + Sync + 'static,
 {
     async fn call(&self, req: tide::Request<State>) -> tide::Result {
-
         match req.remote() {
             Some(remote) => logger::info(&format!("Rendering `SystemState` for '{remote}'.")),
-            None => logger::info("Rendering `SystemState` for unknown remote.")
+            None => logger::info("Rendering `SystemState` for unknown remote."),
         }
 
-        let response = self
-            .lock
+        self.lock
             .read()
             .map_err(|_| tide::Error::new(500, AppError::LockPoisoned("lock for `SystemState`")))
             .and_then(|state_opt| {
@@ -43,7 +41,7 @@ where
                     Some(state) => tide::Body::from_json(&state),
                     None => {
                         logger::debug("Generating new `SystemState` as global instance is `None`.");
-                        tide::Body::from_json(&SystemState::default())
+                        tide::Body::from_json(&SystemState::all())
                     }
                 };
 
@@ -54,20 +52,18 @@ where
                         .build()
                 })
             })
-            .unwrap_or_else(|err| {
-                tide::Response::builder(500)
-                    .body(json!({
-                        "_result": {
-                            "host": {
-                                "status": "error",
-                                "message": err.to_string()
-                            }
-                        }
-                    }))
-                    .content_type(mime::JSON)
-                    .build()
-            });
-
-        tide::Result::Ok(response)
+            .or_else(|err| {
+                tide::Body::from_json(&results::ResultJson::with_capacity(1).add_result(
+                    &"host",
+                    results::ResultState::Err(err.to_string()),
+                    json!({}),
+                ))
+                .and_then(|body| {
+                    Ok(tide::Response::builder(500)
+                        .body(body)
+                        .content_type(mime::JSON)
+                        .build())
+                })
+            })
     }
 }

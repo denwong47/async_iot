@@ -3,6 +3,8 @@ use serde_json;
 
 use time;
 
+use crate::config;
+
 /// An enum for different log levels that appears differently.
 pub enum LogLevel {
     Trace,
@@ -19,8 +21,8 @@ impl LogLevel {
     pub fn ansi_code(&self) -> u8 {
         match self {
             Self::Trace => 8,
-            Self::Debug => 7,
-            Self::Info => 15,
+            Self::Debug => 27,
+            Self::Info => 7,
             Self::Warning => 11,
             Self::Error => 9,
             Self::Critical => 1,
@@ -50,45 +52,35 @@ impl LogLevel {
             ("", "")
         };
 
-        format!(
-            "\u{1b}[38:5:{ansi_code}m{bold_prefix}{text}{bold_suffix}\u{1b}[39m"
-        )
+        format!("\u{1b}[38:5:{ansi_code}m{bold_prefix}{text}{bold_suffix}\u{1b}[39m")
     }
 
     /// Format a string for the requested level.
-    pub fn format(
-        &self,
-        message: &str,
-    ) -> String {
+    pub fn format(&self, message: &str) -> String {
+        let now = time::OffsetDateTime::now_utc()
+            .format(&config::DATETIME_FORMAT)
+            .unwrap_or("(Time unavailable)        ".to_owned());
+
         #[cfg(feature = "jsonl_logging")]
         {
-            serde_json::to_string(
-                &serde_json::json!(
-                    {
-                        "timestamp": time::OffsetDateTime::now_utc(),
-                        "level": self.name(),
-                        "message": message,
-                    }
-                )
-            )
+            serde_json::to_string(&serde_json::json!(
+                {
+                    "timestamp": now,
+                    "level": self.name(),
+                    "message": message,
+                }
+            ))
             .unwrap_or("Invalid JSON".to_owned())
         }
-        
+
         #[cfg(not(feature = "jsonl_logging"))]
         {
-            let now = 
-                time::OffsetDateTime::now_utc()
-                .format(&time::format_description::well_known::Iso8601::DEFAULT)
-                .unwrap_or("(Time unavailable)".to_owned());
-
-            let level = self.wraps(true, self.name());
+            let level = self.wraps(true, &self.name().to_uppercase());
             let message = self.wraps(false, message);
 
-            let level_len = 9 + 28 - self.name().len();
+            let level_len = 9 + 22 + self.ansi_code().to_string().len();
 
-            format!(
-                "{now} | {level:<level_len$} | {message}"
-            )
+            format!("{now} \u{2502} {level:<level_len$} \u{2502} {message}")
         }
     }
 

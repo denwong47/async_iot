@@ -1,14 +1,14 @@
 use std::{sync::RwLock, time::Duration};
 
-use async_iot_models::{exit_codes, logger, results::ExtendedResult, system_state::SystemState};
+use async_iot_models::{exit_codes, logger, results, system_state::SystemState};
 use tokio;
 
 use crate::error::AppError;
 
 pub(crate) fn update_system_state(
-    container: &RwLock<Option<SystemState>>,
+    container: &RwLock<Option<results::ResultJson>>,
 ) -> Result<(), AppError> {
-    let new_state = SystemState::default();
+    let new_state = SystemState::all();
 
     container
         .write()
@@ -20,15 +20,15 @@ pub(crate) fn update_system_state(
 
 /// Refresh a new instance of [`SystemState`] at a configurable frequency.
 pub(crate) async fn system_state_task(
-    container: &RwLock<Option<SystemState>>,
+    container: &RwLock<Option<results::ResultJson>>,
     interval: Duration,
-) -> ExtendedResult<(), AppError> {
+) -> results::ExtendedResult<(), AppError> {
     loop {
         tokio::time::sleep(interval).await;
 
         let result = update_system_state(container);
         match result {
-            Err(err) => return ExtendedResult::Err(exit_codes::SYSTEM_READ_FAILURE, err),
+            Err(err) => return results::ExtendedResult::Err(exit_codes::SYSTEM_READ_FAILURE, err),
             _ => logger::trace("Updated `SystemState`."),
         }
     }

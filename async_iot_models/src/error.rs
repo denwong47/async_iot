@@ -1,6 +1,6 @@
 use thiserror::Error;
 
-#[cfg(feature="python")]
+#[cfg(feature = "python")]
 use pyo3::{PyErr, PyTypeInfo};
 
 /// Various Error types that can arise from Graphaurus operations.
@@ -13,7 +13,7 @@ pub enum LocalError {
 
 impl LocalError {
     /// Consume this [`LocalError`], wrap it in a [`PyErr`], then return it.
-    #[cfg(feature="python")]
+    #[cfg(feature = "python")]
     pub fn into_pyerr<E>(self) -> PyErr
     where
         E: PyTypeInfo,

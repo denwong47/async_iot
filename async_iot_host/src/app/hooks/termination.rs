@@ -5,7 +5,7 @@ use http_types::mime;
 use serde::Deserialize;
 use tide::{prelude::*, Endpoint};
 
-use async_iot_models::{exit_codes, logger};
+use async_iot_models::{exit_codes, logger, results};
 
 use super::super::termination::TerminationToken;
 
@@ -38,18 +38,15 @@ where
         // Try unpacking the query:
         let response = match req.query::<TerminationQuery>() {
             Ok(query) => {
-
                 let response = tide::Response::builder(200)
-                    .body(json!({
-                        "_result": {
-                            "host": {
-                                "status": "ok",
-                            }
-                        },
-                        "host": {
-                            "termination": true,
-                        }
-                    }))
+                    .body(tide::Body::from_json(
+                        &results::ResultJson::with_capacity(1).add_result(
+                            &"host",
+                            results::ResultState::Ok,
+                            json!({"termination": true}
+                            ),
+                        ),
+                    )?)
                     .content_type(mime::JSON)
                     .build();
 
@@ -59,57 +56,57 @@ where
                     // these are used when a firmware update is rolled out etc.
                     match req.remote() {
                         Some(remote) => {
-                            let message = format!("Termination request from '{remote}', app error: {error}.");
+                            let message =
+                                format!("Termination request from '{remote}', app error: {error}.");
                             logger::error(&message);
-                        },
+                        }
                         None => {
-                            let message = format!("Termination request from unknown remote, app error: {error}.");
+                            let message = format!(
+                                "Termination request from unknown remote, app error: {error}."
+                            );
                             logger::error(&message);
                         }
                     }
 
-                    self.token.notify_failure(
-                        exit_codes::REQUESTED_TERMINATION,
-                        AppError::RemoteRequestedTermination{message: error}
-                    ).await;
+                    self.token
+                        .notify_failure(
+                            exit_codes::REQUESTED_TERMINATION,
+                            AppError::RemoteRequestedTermination { message: error },
+                        )
+                        .await;
                 } else {
                     // Successful termination.
-                    self.token.notify_with_warnings(
-                        [
-                            match req.remote() {
-                                Some(remote) => {
-                                    let message = format!("Termination request from '{remote}', app completed.");
-                                    logger::info(&message);
-                                    message
-                                },
-                                None => {
-                                    let message = String::from("Termination request from unknown remote, app completed.");
-                                    logger::info(&message);
-                                    message
-                                }
+                    self.token
+                        .notify_with_warnings([match req.remote() {
+                            Some(remote) => {
+                                let message =
+                                    format!("Termination request from '{remote}', app completed.");
+                                logger::info(&message);
+                                message
                             }
-                        ]
-                    ).await;
+                            None => {
+                                let message = String::from(
+                                    "Termination request from unknown remote, app completed.",
+                                );
+                                logger::info(&message);
+                                message
+                            }
+                        }])
+                        .await;
                 }
 
                 response
-            },
-            Err(err) => {
-                tide::Response::builder(400)
-                    .body(json!({
-                        "_result": {
-                            "host": {
-                                "status": "error",
-                                "message": err.to_string(),
-                            }
-                        },
-                        "host": {
-                            "termination": false,
-                        }
-                    }))
-                    .content_type(mime::JSON)
-                    .build()
             }
+            Err(err) => tide::Response::builder(400)
+                .body(tide::Body::from_json(
+                    &results::ResultJson::with_capacity(1).add_result(
+                        &"host",
+                        results::ResultState::Err(err.to_string()),
+                        json!({"termination": false}),
+                    ),
+                )?)
+                .content_type(mime::JSON)
+                .build(),
         };
 
         tide::Result::Ok(response)

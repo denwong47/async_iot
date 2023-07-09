@@ -1,57 +1,62 @@
-use std::collections::HashMap;
+use std::marker::PhantomData;
 
 use systemstat::{self, Platform};
 
-use serde::Serialize;
-use time::OffsetDateTime;
-
 use crate::{results, traits::ResultToOption};
 
-use super::{cpu::cpu_load, networks::networks, temperatures::temperatures, InterfaceState};
+use super::{cpu::cpu_load, networks::networks, temperatures::temperatures};
 
-#[derive(Clone, Debug, Serialize)]
+/// An empty struct that acts as a wrapper for associated functions.
 pub struct SystemState {
-    _timestamp: OffsetDateTime,
-    _results: HashMap<&'static str, results::ResultState>,
-    cpu_load: Option<systemstat::CPULoad>,
-    temperatures: Option<HashMap<&'static str, f32>>,
-    networks: Option<HashMap<String, Option<InterfaceState>>>,
+    /// Prevents instantiation
+    _private: PhantomData<()>,
 }
 
-impl Default for SystemState {
-    fn default() -> Self {
-        let mut _results = HashMap::new();
+macro_rules! expand_fields {
+    (
+        $((
+            $field: ident,
+            $func: expr
+        )),*$(,)?
+    ) => {
+        impl SystemState {
+            pub fn get(
+                keys: &[&str],
+            ) -> results::ResultJson {
+                let mut json = results::ResultJson::new();
+                let sys = systemstat::System::new();
 
-        let sys = systemstat::System::new();
-
-        macro_rules! expand_fields {
-            (
-                $((
-                    $field: ident,
-                    $func: expr
-                )),*$(,)?
-            ) => {
                 $(
-                    let $field = $func(&sys);
-                    _results.insert(stringify!($field), results::ResultState::from(&$field));
-
+                    if keys.contains(&stringify!($field)) {
+                        let result = $func(&sys);
+                        json.append_result(
+                            &stringify!($field),
+                            results::ResultState::from(&result),
+                            result.to_option(),
+                        );
+                    }
                 )*
-            };
-        }
 
-        expand_fields!(
-            (cpu_load, cpu_load),
-            (temperatures, temperatures),
-            (networks, networks),
-        );
+                json
+            }
 
-        // Creates the instance.
-        Self {
-            _timestamp: OffsetDateTime::now_utc(),
-            _results,
-            cpu_load: cpu_load.to_option(),
-            temperatures: temperatures.to_option(),
-            networks: networks.to_option(),
+            /// Get a [`results::ResultJson`] with all the available
+            /// keys.
+            pub fn all() -> results::ResultJson {
+                Self::get(
+                    &[
+                        $(
+                            stringify!($field),
+                        )*
+                    ]
+                )
+            }
         }
     }
 }
+
+expand_fields!(
+    (cpu_load, cpu_load),
+    (temperatures, temperatures),
+    (networks, networks),
+);

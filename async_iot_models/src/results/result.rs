@@ -1,6 +1,6 @@
 use std::{error::Error, process};
 
-use crate::{traits::ResultToOption, exit_codes};
+use crate::{exit_codes, traits::ResultToOption};
 
 /// An expanded [`std::result::Result`] with an added variant for attaching
 /// warnings.

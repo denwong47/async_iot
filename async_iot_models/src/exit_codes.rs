@@ -1,5 +1,5 @@
 //! Shared command exit codes for all the components of `async_iot`.
-//! 
+//!
 
 pub const SUCCESS: u8 = 0;
 
