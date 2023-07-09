@@ -33,7 +33,7 @@ where
         match value {
             ExtendedResult::Ok(_) => Self::Ok,
             ExtendedResult::WithWarnings(_, warnings) => Self::WithWarnings(warnings.clone()),
-            ExtendedResult::Err(err) => Self::Err(err.to_string()),
+            ExtendedResult::Err(_, err) => Self::Err(err.to_string()),
         }
     }
 }

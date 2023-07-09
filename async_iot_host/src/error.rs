@@ -12,6 +12,12 @@ pub enum AppError {
     #[error("HTTP host encountered an error: {0:?}")]
     TideError(tide::Error),
 
+    #[error("Cannot listen to Ctrl-C calls: {message}")]
+    CtrlCError{ message: String },
+
+    #[error("A remote host requested a termination with error: {message}")]
+    RemoteRequestedTermination{ message: String },
+
     #[error("unknown error occurred: {context}")]
     Unknown { context: String },
 }

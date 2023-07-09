@@ -4,11 +4,10 @@ use std::{sync::{Arc, RwLock}, time::Duration};
 #[allow(unused_imports)]
 use tide::{self, prelude::*};
 
-use tokio::sync::Notify;
-use async_iot_models::{results, system_state};
+use async_iot_models::{results::{self, ExtendedResult}, system_state, exit_codes};
 
 use super::hooks;
-use super::{system_state_task, update_system_state, termination_task};
+use super::{system_state_task, update_system_state, TerminationToken};
 
 use crate::{config, error::AppError};
 
@@ -23,15 +22,25 @@ pub async fn runs_app(addr: &str, port: Option<u16>) -> results::ExtendedResult<
     let listen_target = format!("{addr}:{port}");
 
     // Initialize state.
-    update_system_state(&SYSTEM_STATE);
-    let termination_flag = Arc::new(Notify::new());
+    if let Err(err) = update_system_state(&SYSTEM_STATE) {
+        return ExtendedResult::Err(
+            exit_codes::SYSTEM_READ_FAILURE,
+            err,
+        )
+    }
+    let termination_token = Arc::new(TerminationToken::new());
 
+    // Setting up the App details.
     let mut app = tide::new();
     app.at("/info").get(hooks::info);
     app.at("/state")
         .get(hooks::SystemStateHook::new(&SYSTEM_STATE));
-    app.at("/terminate").get(hooks::TerminationHook::new(Arc::clone(&termination_flag)));
+    app.at("/terminate").get(hooks::TerminationHook::new(Arc::clone(&termination_token)));
 
+    // Now we switch between the eternal coroutines:
+    // - The HTTP host,
+    // - The background loop to update the `SystemState`, and
+    // - The task listening to termination events.
     tokio::select! {
         _ = app.listen(&listen_target) => {
             unreachable!()
@@ -42,7 +51,7 @@ pub async fn runs_app(addr: &str, port: Option<u16>) -> results::ExtendedResult<
         ) => {
             return result
         },
-        result = termination_task(Arc::clone(&termination_flag)) => {
+        result = termination_token.task() => {
             return result
         }
     }

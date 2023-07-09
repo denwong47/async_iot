@@ -5,7 +5,7 @@ use systemstat::{self, data::IpAddr, NetworkAddrs, NetworkStats, Platform};
 
 use serde_json;
 
-use crate::results::ExtendedResult;
+use crate::{exit_codes, results::ExtendedResult};
 
 /// A state for a network interface.
 #[derive(Clone, Debug, Serialize)]
@@ -90,7 +90,7 @@ pub fn networks(
                                     warnings.append(&mut _warnings);
                                     Some(state)
                                 }
-                                ExtendedResult::Err(err) => {
+                                ExtendedResult::Err(_, err) => {
                                     warnings.push(err.to_string());
                                     None
                                 }
@@ -103,6 +103,6 @@ pub fn networks(
 
             ExtendedResult::Ok(map).with_warnings(warnings)
         }
-        Err(err) => ExtendedResult::Err(err),
+        Err(err) => ExtendedResult::Err(exit_codes::SYSTEM_READ_FAILURE, err),
     }
 }

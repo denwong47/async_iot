@@ -28,9 +28,6 @@ where
     State: Clone + Send + Sync + 'static,
 {
     async fn call(&self, _req: tide::Request<State>) -> tide::Result {
-        // let fut = (self)(req);
-        // let res = fut.await?;
-        // Ok(res.into())
 
         let response = self
             .lock
