@@ -4,7 +4,7 @@ use async_trait::async_trait;
 use http_types::mime;
 use tide::{prelude::*, Endpoint};
 
-use async_iot_models::system_state::SystemState;
+use async_iot_models::{logger, system_state::SystemState};
 
 use crate::error::AppError;
 
@@ -27,7 +27,12 @@ impl<State> Endpoint<State> for SystemStateHook
 where
     State: Clone + Send + Sync + 'static,
 {
-    async fn call(&self, _req: tide::Request<State>) -> tide::Result {
+    async fn call(&self, req: tide::Request<State>) -> tide::Result {
+
+        match req.remote() {
+            Some(remote) => logger::info(&format!("Rendering `SystemState` for '{remote}'.")),
+            None => logger::info("Rendering `SystemState` for unknown remote.")
+        }
 
         let response = self
             .lock
@@ -37,7 +42,7 @@ where
                 let body = match state_opt.as_ref() {
                     Some(state) => tide::Body::from_json(&state),
                     None => {
-                        println!("Generating new `SystemState` as global instance is `None`.");
+                        logger::debug("Generating new `SystemState` as global instance is `None`.");
                         tide::Body::from_json(&SystemState::default())
                     }
                 };

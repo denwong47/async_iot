@@ -9,9 +9,12 @@ path = "src/main.rs"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
+[features]
+jsonl_logging = ["async_iot_models/jsonl_logging"]
+
 [dependencies]
 async-trait = "0"
-async_iot_models = { path = "../async_iot_models" }
+async_iot_models = { path = "../async_iot_models", features = ["default"] }
 async-ctrlc = "1"
 http-types = "2"
 lazy_static = "1"

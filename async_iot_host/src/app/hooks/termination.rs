@@ -5,7 +5,7 @@ use http_types::mime;
 use serde::Deserialize;
 use tide::{prelude::*, Endpoint};
 
-use async_iot_models::exit_codes;
+use async_iot_models::{exit_codes, logger};
 
 use super::super::termination::TerminationToken;
 
@@ -38,6 +38,7 @@ where
         // Try unpacking the query:
         let response = match req.query::<TerminationQuery>() {
             Ok(query) => {
+
                 let response = tide::Response::builder(200)
                     .body(json!({
                         "_result": {
@@ -52,13 +53,24 @@ where
                     .content_type(mime::JSON)
                     .build();
 
-                if let Some(message) = query.error {
+                if let Some(error) = query.error {
                     // Failure termination.
                     // The remote host had requested this server to terminate. Typically
                     // these are used when a firmware update is rolled out etc.
+                    match req.remote() {
+                        Some(remote) => {
+                            let message = format!("Termination request from '{remote}', app error: {error}.");
+                            logger::error(&message);
+                        },
+                        None => {
+                            let message = format!("Termination request from unknown remote, app error: {error}.");
+                            logger::error(&message);
+                        }
+                    }
+
                     self.token.notify_failure(
                         exit_codes::REQUESTED_TERMINATION,
-                        AppError::RemoteRequestedTermination{message}
+                        AppError::RemoteRequestedTermination{message: error}
                     ).await;
                 } else {
                     // Successful termination.
@@ -66,10 +78,14 @@ where
                         [
                             match req.remote() {
                                 Some(remote) => {
-                                    format!("Termination request from '{remote}', app completed.")
+                                    let message = format!("Termination request from '{remote}', app completed.");
+                                    logger::info(&message);
+                                    message
                                 },
                                 None => {
-                                    String::from("Termination request from unknown remote, app completed.")
+                                    let message = String::from("Termination request from unknown remote, app completed.");
+                                    logger::info(&message);
+                                    message
                                 }
                             }
                         ]

@@ -1,6 +1,6 @@
 use std::{sync::RwLock, time::Duration};
 
-use async_iot_models::{exit_codes, results::ExtendedResult, system_state::SystemState};
+use async_iot_models::{exit_codes, logger, results::ExtendedResult, system_state::SystemState};
 use tokio;
 
 use crate::error::AppError;
@@ -29,7 +29,7 @@ pub(crate) async fn system_state_task(
         let result = update_system_state(container);
         match result {
             Err(err) => return ExtendedResult::Err(exit_codes::SYSTEM_READ_FAILURE, err),
-            _ => println!("Updated `SystemState`."),
+            _ => logger::trace("Updated `SystemState`."),
         }
     }
 }

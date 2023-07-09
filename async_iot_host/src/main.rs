@@ -2,11 +2,15 @@ use tokio;
 
 use async_iot_host::{app, error::AppError};
 
-use async_iot_models::results;
+use async_iot_models::{logger, results};
 
 #[tokio::main]
 async fn main() -> results::ExtendedResult<(), AppError> {
-    println!("Starting `async_iot_host`.");
+    logger::info("Starting `async_iot_host`.");
 
-    app::runs_app("0.0.0.0", Some(8080)).await.into()
+    let result = app::runs_app("0.0.0.0", Some(8080)).await.into();
+
+    logger::info("Terminating `async_iot_host` gracefully.");
+
+    result
 }

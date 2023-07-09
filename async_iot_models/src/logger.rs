@@ -1,0 +1,124 @@
+#[cfg(feature = "jsonl_logging")]
+use serde_json;
+
+use time;
+
+/// An enum for different log levels that appears differently.
+pub enum LogLevel {
+    Trace,
+    Debug,
+    Info,
+    Warning,
+    Error,
+    Critical,
+}
+
+impl LogLevel {
+    /// Return the ANSI 8-bit colour code for this level.
+    #[cfg(not(feature = "jsonl_logging"))]
+    pub fn ansi_code(&self) -> u8 {
+        match self {
+            Self::Trace => 8,
+            Self::Debug => 7,
+            Self::Info => 15,
+            Self::Warning => 11,
+            Self::Error => 9,
+            Self::Critical => 1,
+        }
+    }
+
+    /// Return the name for this level.
+    pub fn name(&self) -> &'static str {
+        match self {
+            Self::Trace => "trace",
+            Self::Debug => "debug",
+            Self::Info => "info",
+            Self::Warning => "warning",
+            Self::Error => "error",
+            Self::Critical => "critical",
+        }
+    }
+
+    /// Wraps the string in the corresponding colour.
+    #[cfg(not(feature = "jsonl_logging"))]
+    pub fn wraps(&self, bold: bool, text: &str) -> String {
+        let ansi_code = self.ansi_code();
+
+        let (bold_prefix, bold_suffix) = if bold {
+            ("\u{1b}[1m", "\u{1b}[22m")
+        } else {
+            ("", "")
+        };
+
+        format!(
+            "\u{1b}[38:5:{ansi_code}m{bold_prefix}{text}{bold_suffix}\u{1b}[39m"
+        )
+    }
+
+    /// Format a string for the requested level.
+    pub fn format(
+        &self,
+        message: &str,
+    ) -> String {
+        #[cfg(feature = "jsonl_logging")]
+        {
+            serde_json::to_string(
+                &serde_json::json!(
+                    {
+                        "timestamp": time::OffsetDateTime::now_utc(),
+                        "level": self.name(),
+                        "message": message,
+                    }
+                )
+            )
+            .unwrap_or("Invalid JSON".to_owned())
+        }
+        
+        #[cfg(not(feature = "jsonl_logging"))]
+        {
+            let now = 
+                time::OffsetDateTime::now_utc()
+                .format(&time::format_description::well_known::Iso8601::DEFAULT)
+                .unwrap_or("(Time unavailable)".to_owned());
+
+            let level = self.wraps(true, self.name());
+            let message = self.wraps(false, message);
+
+            let level_len = 9 + 28 - self.name().len();
+
+            format!(
+                "{now} | {level:<level_len$} | {message}"
+            )
+        }
+    }
+
+    /// Log a string to `stderr` for the requested level.
+    pub fn log(&self, message: &str) {
+        eprintln!("{}", self.format(message))
+    }
+}
+
+macro_rules! expand_variants {
+    ($((
+        $level:ident,
+        $func:ident
+    )),+$(,)?) => {
+        $(
+            #[doc = "Write a log line to `stderr` at the "]
+            #[doc = stringify!($level)]
+            #[doc = " level."]
+            pub fn $func(message: &str) {
+                LogLevel::$level.log(message)
+            }
+        )*
+    };
+}
+
+expand_variants!(
+    (Trace, trace),
+    (Debug, debug),
+    (Info, info),
+    (Warning, warning),
+    (Error, error),
+    (Critical, critical),
+);

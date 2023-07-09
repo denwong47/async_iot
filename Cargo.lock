@@ -375,7 +375,6 @@ name = "async_iot_models"
 version = "0.1.0"
 dependencies = [
  "lazy_static",
- "pyo3",
  "serde",
  "serde_json",
  "strum",

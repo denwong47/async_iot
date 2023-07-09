@@ -4,7 +4,7 @@ use std::{sync::{Arc, RwLock}, time::Duration};
 #[allow(unused_imports)]
 use tide::{self, prelude::*};
 
-use async_iot_models::{results::{self, ExtendedResult}, system_state, exit_codes};
+use async_iot_models::{logger, results::{self, ExtendedResult}, system_state, exit_codes};
 
 use super::hooks;
 use super::{system_state_task, update_system_state, TerminationToken};
@@ -21,16 +21,21 @@ pub async fn runs_app(addr: &str, port: Option<u16>) -> results::ExtendedResult<
     let port = port.unwrap_or(config::DEFAULT_PORT);
     let listen_target = format!("{addr}:{port}");
 
+    logger::info(&format!("Starting app on {listen_target}."));
+
     // Initialize state.
+    logger::info("Initialising `SystemState`...");
     if let Err(err) = update_system_state(&SYSTEM_STATE) {
         return ExtendedResult::Err(
             exit_codes::SYSTEM_READ_FAILURE,
             err,
         )
     }
+    logger::info("Initialising `TerminationToken`...");
     let termination_token = Arc::new(TerminationToken::new());
 
     // Setting up the App details.
+    logger::info("Initialising `tide::Server`...");
     let mut app = tide::new();
     app.at("/info").get(hooks::info);
     app.at("/state")
@@ -41,6 +46,7 @@ pub async fn runs_app(addr: &str, port: Option<u16>) -> results::ExtendedResult<
     // - The HTTP host,
     // - The background loop to update the `SystemState`, and
     // - The task listening to termination events.
+    logger::info("Starting Tokio Select...");
     tokio::select! {
         _ = app.listen(&listen_target) => {
             unreachable!()
