@@ -10,7 +10,9 @@ path = "src/main.rs"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [features]
+default = []
 jsonl_logging = ["async_iot_models/jsonl_logging"]
+detailed_logging = []
 
 [dependencies]
 async-trait = "0"
@@ -21,4 +23,6 @@ lazy_static = "1"
 serde = "1"
 thiserror = "1"
 tide = { version = "0" }
+time = { version = "0", features = ["serde", "macros", "formatting" ]}
 tokio = { version = "1", features = ["rt-multi-thread", "macros", "sync", "time"] }
+sysinfo = { version = "0.29.4", features = ["serde"] }

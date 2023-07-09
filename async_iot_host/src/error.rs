@@ -15,6 +15,11 @@ pub enum AppError {
     #[error("Cannot listen to Ctrl-C calls: {message}")]
     CtrlCError { message: String },
 
+    #[error(
+        "Attempted to log to a path at {path:?}, but it was not initialised in this `AppState`."
+    )]
+    AppPathNotRecognised { path: String },
+
     #[error("A remote host requested a termination with error: {message}")]
     RemoteRequestedTermination { message: String },
 

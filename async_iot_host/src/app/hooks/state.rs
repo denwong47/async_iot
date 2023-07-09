@@ -1,4 +1,4 @@
-use std::sync::RwLock;
+use std::sync::{Arc, RwLock};
 
 use async_trait::async_trait;
 use http_types::mime;
@@ -6,9 +6,11 @@ use tide::{self, prelude::*, Endpoint};
 
 use async_iot_models::{logger, results, system_state::SystemState};
 
+use crate::app::AppState;
 use crate::error::AppError;
 
 pub struct SystemStateHook {
+    app_state: Arc<AppState>,
     lock: &'static RwLock<Option<results::ResultJson>>,
 }
 
@@ -17,8 +19,11 @@ impl SystemStateHook {
     /// behind a [`RwLock`].
     ///
     /// Due to the lifetime, [`lazy_static`] is needed to create the instance.
-    pub fn new(lock: &'static RwLock<Option<results::ResultJson>>) -> Self {
-        Self { lock }
+    pub fn new(
+        app_state: Arc<AppState>,
+        lock: &'static RwLock<Option<results::ResultJson>>,
+    ) -> Self {
+        Self { app_state, lock }
     }
 }
 
@@ -28,10 +33,8 @@ where
     State: Clone + Send + Sync + 'static,
 {
     async fn call(&self, req: tide::Request<State>) -> tide::Result {
-        match req.remote() {
-            Some(remote) => logger::info(&format!("Rendering `SystemState` for '{remote}'.")),
-            None => logger::info("Rendering `SystemState` for unknown remote."),
-        }
+        // TODO Refactor this to not hard code the path
+        drop(self.app_state.log_visit("/state", req.remote()));
 
         self.lock
             .read()

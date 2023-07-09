@@ -7,19 +7,20 @@ use tide::{prelude::*, Endpoint};
 
 use async_iot_models::{exit_codes, logger, results};
 
-use super::super::termination::TerminationToken;
+use super::super::tasks::TerminationToken;
 
-use crate::error::AppError;
+use crate::{app::AppState, error::AppError};
 
 pub struct TerminationHook {
+    app_state: Arc<AppState>,
     token: Arc<TerminationToken>,
 }
 
 impl TerminationHook {
     /// Create a new [`TerminationHook`] from a [`TerminationToken`] behind an [`Arc`]
     /// reference.
-    pub fn new(token: Arc<TerminationToken>) -> Self {
-        Self { token }
+    pub fn new(app_state: Arc<AppState>, token: Arc<TerminationToken>) -> Self {
+        Self { app_state, token }
     }
 }
 
@@ -35,6 +36,9 @@ where
     State: Clone + Send + Sync + 'static,
 {
     async fn call(&self, req: tide::Request<State>) -> tide::Result {
+        // TODO Refactor this to not hard code the path
+        drop(self.app_state.log_visit("/termination", req.remote()));
+
         // Try unpacking the query:
         let response = match req.query::<TerminationQuery>() {
             Ok(query) => {

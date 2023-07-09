@@ -13,7 +13,7 @@ use async_iot_models::{
 };
 
 use super::hooks;
-use super::{system_state_task, update_system_state, TerminationToken};
+use super::{system_state_task, update_system_state, AppState, TerminationToken};
 
 use crate::{config, error::AppError};
 
@@ -40,11 +40,30 @@ pub async fn runs_app(addr: &str, port: Option<u16>) -> results::ExtendedResult<
     // Setting up the App details.
     logger::debug("Initialising `tide::Server`...");
     let mut app = tide::new();
-    app.at("/info").get(hooks::info);
-    app.at("/state")
-        .get(hooks::SystemStateHook::new(&SYSTEM_STATE));
-    app.at("/terminate")
-        .get(hooks::TerminationHook::new(Arc::clone(&termination_token)));
+
+    // TODO Refactor this to deduplicate string literals?
+    let app_state = AppState::new(&["/info", "/state", "/terminate"]);
+    macro_rules! expand_paths {
+        ($((
+            $path:literal,
+            $end_point:expr
+        )),*$(,)?) => {
+            $(
+                app.at($path).get($end_point);
+            )*
+        };
+    }
+    expand_paths!(
+        ("/info", hooks::InfoHook::new(Arc::clone(&app_state))),
+        (
+            "/state",
+            hooks::SystemStateHook::new(Arc::clone(&app_state), &SYSTEM_STATE)
+        ),
+        (
+            "/terminate",
+            hooks::TerminationHook::new(Arc::clone(&app_state), Arc::clone(&termination_token))
+        ),
+    );
 
     // Now we switch between the eternal coroutines:
     // - The HTTP host,
