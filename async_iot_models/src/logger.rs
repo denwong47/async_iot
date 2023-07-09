@@ -41,6 +41,14 @@ impl LogLevel {
         }
     }
 
+    /// Return the suffix for this level.
+    pub fn suffix(&self) -> &'static str {
+        match self {
+            Self::Trace => "\u{1b}[1A",
+            _ => "",
+        }
+    }
+
     /// Wraps the string in the corresponding colour.
     #[cfg(not(feature = "jsonl_logging"))]
     pub fn wraps(&self, bold: bool, text: &str) -> String {
@@ -77,10 +85,11 @@ impl LogLevel {
         {
             let level = self.wraps(true, &self.name().to_uppercase());
             let message = self.wraps(false, message);
+            let suffix = self.suffix();
 
             let level_len = 9 + 22 + self.ansi_code().to_string().len();
 
-            format!("{now} \u{2502} {level:<level_len$} \u{2502} {message}")
+            format!("{now} \u{2502} {level:<level_len$} \u{2502} {message}{suffix}")
         }
     }
 
