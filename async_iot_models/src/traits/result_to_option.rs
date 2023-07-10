@@ -1,5 +1,3 @@
-use std::error::Error;
-
 /// A generic trait for converting a [`Result`] to [`Option`].
 ///
 /// Useful to let some fields remain upon serialization, even if it is
@@ -9,10 +7,7 @@ pub trait ResultToOption<T> {
     fn to_option(self) -> Option<T>;
 }
 
-impl<T, E> ResultToOption<T> for Result<T, E>
-where
-    E: Error,
-{
+impl<T, E> ResultToOption<T> for Result<T, E> {
     fn to_option(self) -> Option<T> {
         match self {
             Ok(ob) => Some(ob),

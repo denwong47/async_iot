@@ -5,6 +5,7 @@ use systemstat::{self, data::IpAddr, NetworkAddrs, NetworkStats, Platform};
 
 use serde_json;
 
+use super::SystemState;
 use crate::{exit_codes, results::ExtendedResult};
 
 /// A state for a network interface.
@@ -62,9 +63,9 @@ impl InterfaceState {
 
 /// Get the current networks using systemstat.
 pub fn networks(
-    sys: &systemstat::System,
+    sys: &SystemState,
 ) -> ExtendedResult<HashMap<String, Option<InterfaceState>>, io::Error> {
-    let try_networks = sys.networks();
+    let try_networks = sys.systemstat.networks();
 
     match try_networks {
         Ok(networks) => {
@@ -74,7 +75,7 @@ pub fn networks(
                     (
                         network.name.clone(),
                         network.addrs,
-                        sys.network_stats(&network.name),
+                        sys.systemstat.network_stats(&network.name),
                     )
                 })
                 .fold(

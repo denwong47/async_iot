@@ -2,11 +2,12 @@ use std::{collections::HashMap, io};
 
 use systemstat::{self, Platform};
 
+use super::SystemState;
 use crate::results;
 
 /// Get temperatures of this machine.
 pub fn temperatures(
-    sys: &systemstat::System,
+    sys: &SystemState,
 ) -> results::ExtendedResult<HashMap<&'static str, f32>, io::Error> {
     let mut map = HashMap::new();
     let mut warnings = Vec::new();
@@ -34,6 +35,6 @@ pub fn temperatures(
 }
 
 /// Internal function to fetch CPU temperature.
-fn cpu_temp(sys: &systemstat::System) -> io::Result<f32> {
-    sys.cpu_temp()
+fn cpu_temp(sys: &SystemState) -> io::Result<f32> {
+    sys.systemstat.cpu_temp()
 }

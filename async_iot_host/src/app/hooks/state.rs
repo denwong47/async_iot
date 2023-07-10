@@ -44,7 +44,7 @@ where
                     Some(state) => tide::Body::from_json(&state),
                     None => {
                         logger::debug("Generating new `SystemState` as global instance is `None`.");
-                        tide::Body::from_json(&SystemState::all())
+                        tide::Body::from_json(&SystemState::new().all())
                     }
                 };
 

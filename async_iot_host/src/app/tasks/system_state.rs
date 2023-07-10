@@ -8,7 +8,7 @@ use crate::error::AppError;
 pub(crate) fn update_system_state(
     container: &RwLock<Option<results::ResultJson>>,
 ) -> Result<(), AppError> {
-    let new_state = SystemState::all();
+    let new_state = SystemState::new().all();
 
     container
         .write()

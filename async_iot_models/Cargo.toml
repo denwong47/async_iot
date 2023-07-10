@@ -3,6 +3,9 @@ name = "async_iot_models"
 version = "0.1.0"
 edition = "2021"
 
+[profile.release]
+strip = true
+
 [lib]
 name = "async_iot_models"
 path = "src/lib.rs"
@@ -20,6 +23,7 @@ lazy_static = "1"
 serde = { version = "1", features = ["derive"] }
 serde_json = { version = "1" }
 strum = { version = "0", features = ["derive"]}
+sysinfo = { version = "0.29.4", features = ["serde"] }
 systemstat = { version = "0.2.3", features = ["serde"] }
 thiserror = { version = "1" }
 time = { version = "0", features = ["serde", "formatting", "macros"] }
