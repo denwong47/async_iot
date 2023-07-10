@@ -42,7 +42,7 @@ pub async fn runs_app(addr: &str, port: Option<u16>) -> results::ExtendedResult<
     let mut app = tide::new();
 
     // TODO Refactor this to deduplicate string literals?
-    let app_state = AppState::new(&["/info", "/state", "/terminate"]);
+    let app_state = AppState::new();
     macro_rules! expand_paths {
         ($((
             $path:literal,

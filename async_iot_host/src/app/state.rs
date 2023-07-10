@@ -2,7 +2,7 @@ use std::{
     collections::HashMap,
     sync::{
         atomic::{AtomicU64, Ordering},
-        Arc,
+        Arc, RwLock,
     },
 };
 
@@ -13,9 +13,6 @@ use async_iot_models::{logger, traits::ResultToOption};
 
 use crate::config;
 use crate::error::AppError;
-
-#[cfg(feature = "detailed_logging")]
-use std::sync::RwLock;
 
 /// A struct to contain information about a single visit.
 #[cfg(feature = "detailed_logging")]
@@ -28,7 +25,7 @@ pub struct AppVisit {
 /// A struct holding statistics about app use.
 pub struct AppState {
     pub start_time: time::OffsetDateTime,
-    visit_counts: HashMap<String, AtomicU64>,
+    visit_counts: RwLock<HashMap<String, AtomicU64>>,
 
     #[cfg(feature = "detailed_logging")]
     latest_visits: RwLock<Vec<AppVisit>>,
@@ -37,23 +34,29 @@ pub struct AppState {
 impl AppState {
     /// Instantiate a new [`AppState`] with the timestamps set to the current
     /// UTC time.
-    pub fn new(paths: &[&str]) -> Arc<Self> {
-        let mut instance = Self {
+    pub fn new() -> Arc<Self> {
+        Arc::new(Self {
             start_time: time::OffsetDateTime::now_utc(),
-            visit_counts: HashMap::new(),
+            visit_counts: RwLock::new(HashMap::new()),
 
             #[cfg(feature = "detailed_logging")]
             latest_visits: RwLock::new(Vec::with_capacity(config::LOG_LATEST_VISITS)),
-        };
+        })
+    }
 
-        paths.into_iter().for_each(|path| instance.init_path(path));
-
-        Arc::new(instance)
+    /// Insert a new path into the visitor counter, together with an initial value.
+    pub fn insert_path(&self, path: &str, count: u64) -> Result<(), AppError> {
+        self.visit_counts
+            .write()
+            .map(|mut map| {
+                map.insert(path.to_string(), count.into());
+            })
+            .map_err(|_| AppError::LockPoisoned("visits counter"))
     }
 
     /// All paths need to be initialised before visits can be logged.
-    pub fn init_path(&mut self, path: &str) {
-        self.visit_counts.insert(path.to_string(), 0.into());
+    pub fn init_path(&self, path: &str) -> Result<(), AppError> {
+        self.insert_path(path, 0)
     }
 
     /// Calculate the uptime of this app.
@@ -68,39 +71,47 @@ impl AppState {
             None => logger::info("Rendering '{path}' for unknown remote."),
         }
 
-        match self.visit_counts.get(path) {
-            Some(counter) => Ok(counter.fetch_add(1, Ordering::Relaxed)),
-            None => Err(AppError::AppPathNotRecognised {
-                path: path.to_string(),
-            }),
-        }
-        .and_then(|_| {
-            #[cfg(not(feature = "detailed_logging"))]
-            {
-                Ok(())
-            }
+        self.visit_counts
+            .read()
+            .or(Err(AppError::LockPoisoned("visits counter")))
+            .and_then(|map| {
+                if let Some(counter) = map.get(path) {
+                    Ok(counter.fetch_add(1, Ordering::Relaxed))
+                } else {
+                    // We HAVE to drop `map` out of scope here.
+                    // `insert_path()` uses `visit_counts.write()`, so as long as `map`
+                    // exists, `visit_counts.write()` will block.
+                    drop(map);
+                    self.insert_path(path, 1).and(Ok(0))
+                }
+            })
+            .and_then(|_| {
+                #[cfg(not(feature = "detailed_logging"))]
+                {
+                    Ok(())
+                }
 
-            #[cfg(feature = "detailed_logging")]
-            {
-                let visit = AppVisit {
-                    path: path.to_string(),
-                    remote: remote.map(|s| s.to_string()),
-                };
+                #[cfg(feature = "detailed_logging")]
+                {
+                    let visit = AppVisit {
+                        path: path.to_string(),
+                        remote: remote.map(|s| s.to_string()),
+                    };
 
-                self.latest_visits
-                    .write()
-                    .map_err(|_| AppError::LockPoisoned("Latest Visits"))
-                    .and_then(|mut latest_visits| {
-                        if latest_visits.len() >= latest_visits.capacity() {
-                            latest_visits.remove(0);
-                        }
+                    self.latest_visits
+                        .write()
+                        .map_err(|_| AppError::LockPoisoned("Latest Visits"))
+                        .and_then(|mut latest_visits| {
+                            if latest_visits.len() >= latest_visits.capacity() {
+                                latest_visits.remove(0);
+                            }
 
-                        latest_visits.push(visit);
+                            latest_visits.push(visit);
 
-                        Ok(())
-                    })
-            }
-        })
+                            Ok(())
+                        })
+                }
+            })
     }
 }
 
