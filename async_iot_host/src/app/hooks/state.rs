@@ -43,7 +43,17 @@ where
         drop(self.app_state.log_visit("/state", req.remote()));
 
         let subset = if self.subset {
-            req.param("subset").map(|key| vec![key]).to_option()
+            req.param("subset")
+                .map(|key| vec![key])
+                .to_option()
+                .and_then(|subset| {
+                    if subset.get(0).unwrap_or(&"").len() == 0 {
+                        // Treat `/state/` as `/state`
+                        None
+                    } else {
+                        Some(subset)
+                    }
+                })
         } else {
             None
         };

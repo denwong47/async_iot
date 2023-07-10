@@ -3,7 +3,10 @@ use systemstat::{self, Platform};
 
 use crate::{results, traits::ResultToOption};
 
-use super::{cpu::cpu, networks::networks, system::system, temperatures::temperatures};
+use super::{
+    cpu::cpu, disks::disks, memory::memory, networks::networks, system::system,
+    temperatures::temperatures,
+};
 
 #[cfg(target_os = "linux")]
 use psutil::{self, sensors};
@@ -76,5 +79,7 @@ expand_fields!(
     (system, system),
     (cpu, cpu),
     (temperatures, temperatures),
+    (memory, memory),
+    (disks, disks),
     (networks, networks),
 );

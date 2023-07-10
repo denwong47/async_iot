@@ -2,6 +2,8 @@ mod base;
 pub use base::*;
 
 pub mod cpu;
+pub mod disks;
+pub mod memory;
 pub mod temperatures;
 
 mod networks;
