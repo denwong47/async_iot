@@ -57,7 +57,11 @@ pub async fn runs_app(addr: &str, port: Option<u16>) -> results::ExtendedResult<
         ("/info", hooks::InfoHook::new(Arc::clone(&app_state))),
         (
             "/state",
-            hooks::SystemStateHook::new(Arc::clone(&app_state), &SYSTEM_STATE)
+            hooks::SystemStateHook::new(Arc::clone(&app_state), &SYSTEM_STATE, false)
+        ),
+        (
+            "/state/:subset",
+            hooks::SystemStateHook::new(Arc::clone(&app_state), &SYSTEM_STATE, true)
         ),
         (
             "/terminate",

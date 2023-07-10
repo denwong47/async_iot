@@ -27,6 +27,22 @@ impl ResultJson {
         }
     }
 
+    /// Return a [`ResultJson`] down with only the included keys.
+    ///
+    /// # Note
+    ///
+    /// Any keys not present in the instance are ignored.
+    pub fn get(&self, keys: &[&str]) -> Self {
+        Self {
+            results: self
+                .results
+                .iter()
+                .filter(|(key, ..)| keys.contains(&key.as_str()))
+                .map(|result| result.clone())
+                .collect(),
+        }
+    }
+
     /// Append a result to this [`ResultJson`] in place.
     ///
     /// This function is assured to succeed, yet it is possible that the resultant

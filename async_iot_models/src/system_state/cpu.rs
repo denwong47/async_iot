@@ -35,7 +35,7 @@ pub fn cpu(sys: &SystemState) -> results::ExtendedResult<Value, io::Error> {
     let cpu_globals = sys.sysinfo.global_cpu_info();
 
     let cpu_load = sys.systemstat.cpu_load_aggregate().and_then(|cpu| {
-        sleep(Duration::from_micros(10000));
+        sleep(Duration::from_micros(50000));
         cpu.done()
     });
 

@@ -4,7 +4,7 @@ use async_trait::async_trait;
 use http_types::mime;
 use tide::{self, prelude::*, Endpoint};
 
-use async_iot_models::{logger, results, system_state::SystemState};
+use async_iot_models::{logger, results, system_state::SystemState, traits::ResultToOption};
 
 use crate::app::AppState;
 use crate::error::AppError;
@@ -12,6 +12,7 @@ use crate::error::AppError;
 pub struct SystemStateHook {
     app_state: Arc<AppState>,
     lock: &'static RwLock<Option<results::ResultJson>>,
+    subset: bool,
 }
 
 impl SystemStateHook {
@@ -22,8 +23,13 @@ impl SystemStateHook {
     pub fn new(
         app_state: Arc<AppState>,
         lock: &'static RwLock<Option<results::ResultJson>>,
+        subset: bool,
     ) -> Self {
-        Self { app_state, lock }
+        Self {
+            app_state,
+            lock,
+            subset,
+        }
     }
 }
 
@@ -36,13 +42,26 @@ where
         // TODO Refactor this to not hard code the path
         drop(self.app_state.log_visit("/state", req.remote()));
 
+        let subset = if self.subset {
+            req.param("subset").map(|key| vec![key]).to_option()
+        } else {
+            None
+        };
+
         self.lock
             .read()
             .map_err(|_| tide::Error::new(500, AppError::LockPoisoned("lock for `SystemState`")))
             .and_then(|state_opt| {
-                let body = match state_opt.as_ref() {
-                    Some(state) => tide::Body::from_json(&state),
-                    None => {
+                let body = match (state_opt.as_ref(), subset) {
+                    (Some(state), Some(subset)) => tide::Body::from_json(&state.get(&subset)),
+                    (Some(state), None) => tide::Body::from_json(&state),
+                    (None, Some(subset)) => {
+                        logger::debug(
+                            "Generating new subsetted `SystemState` as global instance is `None`.",
+                        );
+                        tide::Body::from_json(&SystemState::new().get(&subset))
+                    }
+                    (None, None) => {
                         logger::debug("Generating new `SystemState` as global instance is `None`.");
                         tide::Body::from_json(&SystemState::new().all())
                     }
