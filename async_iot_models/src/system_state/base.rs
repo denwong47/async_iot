@@ -5,10 +5,16 @@ use crate::{results, traits::ResultToOption};
 
 use super::{cpu::cpu, networks::networks, system::system, temperatures::temperatures};
 
+#[cfg(target_os = "linux")]
+use psutil::{self, sensors};
+
 /// An empty struct that acts as a wrapper for associated functions.
 pub struct SystemState {
     pub systemstat: systemstat::System,
     pub sysinfo: sysinfo::System,
+
+    #[cfg(target_os = "linux")]
+    pub psutil_sensors: Vec<psutil::Result<sensors::TemperatureSensor>>,
 }
 
 macro_rules! expand_fields {
@@ -24,6 +30,9 @@ macro_rules! expand_fields {
                 Self {
                     systemstat: systemstat::System::new(),
                     sysinfo: sysinfo::System::new_all(),
+
+                    #[cfg(target_os = "linux")]
+                    psutil_sensors: sensors::temperatures(),
                 }
             }
 
