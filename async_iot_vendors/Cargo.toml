@@ -1,9 +1,16 @@
 [package]
-name = "async_iot_client"
+name = "async_iot_vendors"
 version = "0.1.0"
 edition = "2021"
 
+[profile.release]
+strip = true
+
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[lib]
+name = "async_iot_vendors"
+path = "src/lib.rs"
+
 [features]
 default = ["async_iot_server", "async_iot_sensors", "shellyv1"]
 shellyv1 = []
@@ -13,11 +20,10 @@ async_iot_server = []
 async_iot_sensors = []
 
 [dependencies]
-async-trait = { version = "0" }
-async_iot_vendors = { path = "../async_iot_vendors", features = ["default"] }
 lazy_static = "1"
 reqwest = { version = "0", features = ["cookies", "json", "gzip"] }
 serde = { version = "1", features = ["derive"] }
-serde_json = "1"
-time = { version = "0", features = ["serde", "macros", "formatting" ]}
-tokio = { version = "1", features = ["full"] }
+serde_json = { version = "1" }
+strum = { version = "0", features = ["derive"]}
+thiserror = { version = "1" }
+time = { version = "0", features = ["serde", "formatting", "macros"] }

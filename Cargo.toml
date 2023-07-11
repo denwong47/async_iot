@@ -17,6 +17,7 @@ crate-type = ["cdylib"]
 async_iot_client = { path = "./async_iot_client" }
 async_iot_host = { path = "./async_iot_host" }
 async_iot_models = { path = "./async_iot_models" }
+async_iot_vendors = { path = "./async_iot_vendors" }
 pyo3 = { version = "0", features = ["extension-module"] }
 num-format = "0"
 timeit = "0"

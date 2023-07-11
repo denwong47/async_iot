@@ -123,9 +123,9 @@ dependencies = [
 
 [[package]]
 name = "async-compression"
-version = "0.4.0"
+version = "0.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5b0122885821398cc923ece939e24d1056a2384ee719432397fa9db87230ff11"
+checksum = "62b74f44609f0f91493e3082d3734d98497e094777144380ea4db9f9905dd5b6"
 dependencies = [
  "flate2",
  "futures-core",
@@ -331,6 +331,7 @@ dependencies = [
  "async_iot_client",
  "async_iot_host",
  "async_iot_models",
+ "async_iot_vendors",
  "num-format",
  "pyo3",
  "serde",
@@ -347,11 +348,12 @@ name = "async_iot_client"
 version = "0.1.0"
 dependencies = [
  "async-trait",
- "chrono",
+ "async_iot_vendors",
  "lazy_static",
  "reqwest",
  "serde",
  "serde_json",
+ "time 0.3.23",
  "tokio",
 ]
 
@@ -362,6 +364,7 @@ dependencies = [
  "async-ctrlc",
  "async-trait",
  "async_iot_models",
+ "async_iot_vendors",
  "http-types",
  "lazy_static",
  "serde",
@@ -382,6 +385,19 @@ dependencies = [
  "strum",
  "sysinfo",
  "systemstat",
+ "thiserror",
+ "time 0.3.23",
+]
+
+[[package]]
+name = "async_iot_vendors"
+version = "0.1.0"
+dependencies = [
+ "lazy_static",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "strum",
  "thiserror",
  "time 0.3.23",
 ]
@@ -2170,9 +2186,9 @@ checksum = "388a1df253eca08550bef6c72392cfe7c30914bf41df5269b68cbd6ff8f570a3"
 
 [[package]]
 name = "serde"
-version = "1.0.170"
+version = "1.0.171"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a56657f512baabca8f840542f9ca8152aecf182c473c26e46e58d6aab4f6e439"
+checksum = "30e27d1e4fd7659406c492fd6cfaf2066ba8773de45ca75e855590f856dc34a9"
 dependencies = [
  "serde_derive",
 ]
@@ -2192,9 +2208,9 @@ dependencies = [
 
 [[package]]
 name = "serde_derive"
-version = "1.0.170"
+version = "1.0.171"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "77d477848e6b23adba0db397777d5aad864555bc17fd9c89abb3b8009788b7b8"
+checksum = "389894603bd18c46fa56231694f8d827779c0951a667087194cf9de94ed24682"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -2574,9 +2590,9 @@ dependencies = [
 
 [[package]]
 name = "target-lexicon"
-version = "0.12.8"
+version = "0.12.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1b1c7f239eb94671427157bd93b3694320f3668d4e1eff08c7285366fd777fac"
+checksum = "df8e77cb757a61f51b947ec4a7e3646efd825b73561db1c232a8ccb639e611a0"
 
 [[package]]
 name = "tempfile"

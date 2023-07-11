@@ -1,5 +1,10 @@
-mod system_state;
-mod termination;
+#[macro_use]
+pub mod futureless;
 
-pub(crate) use system_state::*;
+mod termination;
 pub(crate) use termination::*;
+
+#[cfg(feature = "system_state")]
+mod system_state;
+#[cfg(feature = "system_state")]
+pub(crate) use system_state::*;

@@ -1,22 +1,30 @@
-use lazy_static::lazy_static;
-use std::{
-    sync::{Arc, RwLock},
-    time::Duration,
-};
+#[allow(unused_imports)]
+use std::{sync::Arc, time::Duration};
 
 #[allow(unused_imports)]
 use tide::{self, prelude::*};
 
-use async_iot_models::{
-    exit_codes, logger,
-    results::{self, ExtendedResult},
-};
+use async_iot_models::{logger, results};
 
-use super::hooks;
-use super::{system_state_task, update_system_state, AppState, TerminationToken};
-
+use super::{hooks, AppState, TerminationToken};
 use crate::{config, error::AppError};
 
+#[allow(unused_imports)]
+use crate::feature_gated;
+
+#[cfg(feature = "system_state")]
+use lazy_static::lazy_static;
+
+#[cfg(feature = "system_state")]
+use super::{system_state_task, update_system_state};
+
+#[cfg(feature = "system_state")]
+use std::sync::RwLock;
+
+#[cfg(feature = "system_state")]
+use async_iot_models::{exit_codes, results::ExtendedResult};
+
+#[cfg(feature = "system_state")]
 lazy_static! {
     /// This is an example for using doc comment attributes
     static ref SYSTEM_STATE: RwLock<Option<results::ResultJson>> = RwLock::new(None);
@@ -30,10 +38,14 @@ pub async fn runs_app(addr: &str, port: Option<u16>) -> results::ExtendedResult<
     logger::info(&format!("Starting app on {listen_target}."));
 
     // Initialize state.
-    logger::debug("Initialising `SystemState`...");
-    if let Err(err) = update_system_state(&SYSTEM_STATE) {
-        return ExtendedResult::Err(exit_codes::SYSTEM_READ_FAILURE, err);
+    #[cfg(feature = "system_state")]
+    {
+        logger::debug("Initialising `SystemState`...");
+        if let Err(err) = update_system_state(&SYSTEM_STATE) {
+            return ExtendedResult::Err(exit_codes::SYSTEM_READ_FAILURE, err);
+        }
     }
+
     logger::debug("Initialising `TerminationToken`...");
     let termination_token = Arc::new(TerminationToken::new());
 
@@ -56,16 +68,20 @@ pub async fn runs_app(addr: &str, port: Option<u16>) -> results::ExtendedResult<
     expand_paths!(
         ("/info", hooks::InfoHook::new(Arc::clone(&app_state))),
         (
+            "/terminate",
+            hooks::TerminationHook::new(Arc::clone(&app_state), Arc::clone(&termination_token))
+        ),
+    );
+
+    #[cfg(feature = "system_state")]
+    expand_paths!(
+        (
             "/state",
             hooks::SystemStateHook::new(Arc::clone(&app_state), &SYSTEM_STATE, false)
         ),
         (
             "/state/:subset",
             hooks::SystemStateHook::new(Arc::clone(&app_state), &SYSTEM_STATE, true)
-        ),
-        (
-            "/terminate",
-            hooks::TerminationHook::new(Arc::clone(&app_state), Arc::clone(&termination_token))
         ),
     );
 
@@ -78,9 +94,11 @@ pub async fn runs_app(addr: &str, port: Option<u16>) -> results::ExtendedResult<
         _ = app.listen(&listen_target) => {
             unreachable!()
         },
-        result = system_state_task(
-            &SYSTEM_STATE,
-            Duration::from_secs(config::SYSTEM_STATE_REFRESH_RATE),
+        result = feature_gated!(
+            "system_state" => system_state_task(
+                &SYSTEM_STATE,
+                Duration::from_secs(config::SYSTEM_STATE_REFRESH_RATE),
+            )
         ) => {
             return result
         },
