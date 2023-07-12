@@ -1,9 +1,14 @@
 use async_trait::async_trait;
+use std::sync::RwLock;
 
 use sysinfo::{self, SystemExt};
 use systemstat::{self, Platform};
 
-use crate::{results, traits::{ResultToOption, HasState}};
+use crate::{
+    results,
+    traits::{HasCachedState, HasState, ResultToOption},
+    LocalError,
+};
 
 use super::{
     cpu::cpu, disks::disks, memory::memory, networks::networks, system::system,
@@ -17,6 +22,8 @@ use psutil::{self, sensors};
 pub struct SystemState {
     pub systemstat: systemstat::System,
     pub sysinfo: sysinfo::System,
+
+    _cache: RwLock<Option<results::ResultJson>>,
 
     #[cfg(target_os = "linux")]
     pub psutil_sensors: Vec<psutil::Result<sensors::TemperatureSensor>>,
@@ -36,6 +43,8 @@ macro_rules! expand_fields {
                     systemstat: systemstat::System::new(),
                     sysinfo: sysinfo::System::new_all(),
 
+                    _cache: RwLock::new(None),
+
                     #[cfg(target_os = "linux")]
                     psutil_sensors: sensors::temperatures(),
                 }
@@ -45,10 +54,10 @@ macro_rules! expand_fields {
         #[async_trait]
         impl HasState for SystemState {
             /// Get a [`results::ResultJson`] with only the specified keys.
-            async fn get(
+            async fn try_get(
                 &self,
                 keys: &[&str],
-            ) -> results::ResultJson {
+            ) -> Result<results::ResultJson, LocalError> {
                 let mut json = results::ResultJson::new();
 
                 $(
@@ -62,19 +71,22 @@ macro_rules! expand_fields {
                     }
                 )*
 
-                json
+                Ok(json)
+            }
+
+            /// Get a [`Vec`] of all the available keys for [`SystemState::get()`].
+            fn available_keys(&self) -> Vec<&str> {
+                vec![
+                    $(
+                        stringify!($field),
+                    )*
+                ]
             }
 
             /// Get a [`results::ResultJson`] with all the available
             /// keys.
-            async fn all(&self) -> results::ResultJson {
-                self.get(
-                    &[
-                        $(
-                            stringify!($field),
-                        )*
-                    ]
-                ).await
+            async fn try_all(&self) -> Result<results::ResultJson, LocalError> {
+                self.try_get(&self.available_keys()).await
             }
         }
     }
@@ -88,3 +100,10 @@ expand_fields!(
     (disks, disks),
     (networks, networks),
 );
+
+#[async_trait]
+impl HasCachedState for SystemState {
+    async fn locked_cache<'a>(&'a self) -> &'a RwLock<Option<results::ResultJson>> {
+        &self._cache
+    }
+}

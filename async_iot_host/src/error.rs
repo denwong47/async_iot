@@ -17,11 +17,6 @@ pub enum AppError {
     #[error("Cannot listen to Ctrl-C calls: {message}")]
     CtrlCError { message: String },
 
-    #[error(
-        "Attempted to log to a path at {path:?}, but it was not initialised in this `AppState`."
-    )]
-    AppPathNotRecognised { path: String },
-
     #[error("A remote host requested a termination with error: {message}")]
     RemoteRequestedTermination { message: String },
 
@@ -33,7 +28,9 @@ impl From<LocalError> for AppError {
     fn from(value: LocalError) -> Self {
         match value {
             LocalError::LockPoisoned(msg) => Self::LockPoisoned(msg),
-            err => Self::Unknown { context: err.to_string() },
+            err => Self::Unknown {
+                context: err.to_string(),
+            },
         }
     }
 }

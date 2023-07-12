@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, error::Error};
 
 use serde::{ser::SerializeMap, Serialize};
 use serde_json::{self, Value as JsonValue};
@@ -80,6 +80,19 @@ impl ResultJson {
     {
         self.append_result(key, state, value);
         self
+    }
+}
+
+impl ResultJson {
+    /// Create a new instance of [`ResultJson`] from an Error by populating it into all
+    /// the keys supplied.
+    pub fn from_err<E>(value: E, keys: &[&str]) -> Self
+    where
+        E: Error,
+    {
+        keys.iter().fold(Self::new(), |json, key| {
+            json.add_result(key, ResultState::Err(value.to_string()), Option::<()>::None)
+        })
     }
 }
 

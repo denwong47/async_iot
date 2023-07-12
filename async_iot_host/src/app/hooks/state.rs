@@ -1,17 +1,18 @@
-use std::sync::{Arc, RwLock};
+use std::sync::Arc;
 
 use async_trait::async_trait;
-use http_types::mime;
-use tide::{self, prelude::*, Endpoint};
+use tide::{self, Endpoint};
 
-use async_iot_models::{logger, results, system_state::SystemState, traits::{HasState, ResultToOption}};
+use async_iot_models::{
+    system_state::SystemState,
+    traits::{HasCachedState, HasState, ResultToOption},
+};
 
-use crate::app::AppState;
-use crate::error::AppError;
+use crate::{app::AppState, error::AppError, traits::ResultToJson};
 
 pub struct SystemStateHook {
     app_state: Arc<AppState>,
-    lock: &'static RwLock<Option<results::ResultJson>>,
+    state: Arc<SystemState>,
     subset: bool,
 }
 
@@ -20,14 +21,10 @@ impl SystemStateHook {
     /// behind a [`RwLock`].
     ///
     /// Due to the lifetime, [`lazy_static`] is needed to create the instance.
-    pub fn new(
-        app_state: Arc<AppState>,
-        lock: &'static RwLock<Option<results::ResultJson>>,
-        subset: bool,
-    ) -> Self {
+    pub fn new(app_state: Arc<AppState>, state: Arc<SystemState>, subset: bool) -> Self {
         Self {
             app_state,
-            lock,
+            state,
             subset,
         }
     }
@@ -58,51 +55,19 @@ where
             None
         };
 
-        let body_opt = self.lock
-            .read()
-            .map_err(|_| tide::Error::new(500, AppError::LockPoisoned("lock for `SystemState`")))
-            .and_then(|state_opt| {
-                match (state_opt.as_ref(), &subset) {
-                    (Some(state), Some(subset)) => tide::Body::from_json(&state.get(&subset)).map(|v| Some(v)),
-                    (Some(state), None) => tide::Body::from_json(&state).map(|v| Some(v)),
-                    _ => Ok(None),
-                }
-            })
-        ?;
-
-        // This is only necessary because we need an async block
-        let body = match (body_opt, subset) {
-            (Some(body), _) => Ok(body),
-            (None, Some(subset)) => {
-                logger::debug(
-                    "Generating new subsetted `SystemState` as global instance is `None`.",
-                );
-                tide::Body::from_json(&SystemState::new().get(&subset).await)
-            }
-            (None, None) => {
-                logger::debug("Generating new `SystemState` as global instance is `None`.");
-                tide::Body::from_json(&SystemState::new().all().await)
-            }
+        let target_keys = if self.subset {
+            subset
+                .and_then(|v| if &v == &[""] { None } else { Some(v) })
+                .unwrap_or_else(|| self.state.available_keys())
+        } else {
+            self.state.available_keys()
         };
 
-        body.map(|body| {
-            tide::Response::builder(200)
-                .body(body)
-                .content_type(mime::JSON)
-                .build()
-        })
-        .or_else(|err| {
-            tide::Body::from_json(&results::ResultJson::with_capacity(1).add_result(
-                &"host",
-                results::ResultState::Err(err.to_string()),
-                json!({}),
-            ))
-            .and_then(|body| {
-                Ok(tide::Response::builder(500)
-                    .body(body)
-                    .content_type(mime::JSON)
-                    .build())
-            })
-        })
+        Ok(self
+            .state
+            .get_cache_or_update(&target_keys)
+            .await
+            .map_err(|err| tide::Error::new(500, AppError::from(err)))
+            .to_tide_response(&target_keys))
     }
 }

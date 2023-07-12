@@ -4,7 +4,7 @@ use std::{sync::Arc, time::Duration};
 #[allow(unused_imports)]
 use tide::{self, prelude::*};
 
-use async_iot_models::{logger, results};
+use async_iot_models::{logger, results, system_state::SystemState, traits::HasCachedState};
 
 use super::{hooks, AppState, TerminationToken};
 use crate::{config, error::AppError};
@@ -13,22 +13,10 @@ use crate::{config, error::AppError};
 use crate::feature_gated;
 
 #[cfg(feature = "system_state")]
-use lazy_static::lazy_static;
+use super::system_state_task;
 
 #[cfg(feature = "system_state")]
-use super::{system_state_task, update_system_state};
-
-#[cfg(feature = "system_state")]
-use std::sync::RwLock;
-
-#[cfg(feature = "system_state")]
-use async_iot_models::{exit_codes, results::ExtendedResult};
-
-#[cfg(feature = "system_state")]
-lazy_static! {
-    /// This is an example for using doc comment attributes
-    static ref SYSTEM_STATE: RwLock<Option<results::ResultJson>> = RwLock::new(None);
-}
+use async_iot_models::exit_codes;
 
 /// Runs the host app.
 pub async fn runs_app(addr: &str, port: Option<u16>) -> results::ExtendedResult<(), AppError> {
@@ -39,12 +27,15 @@ pub async fn runs_app(addr: &str, port: Option<u16>) -> results::ExtendedResult<
 
     // Initialize state.
     #[cfg(feature = "system_state")]
-    {
+    let system_state = {
         logger::debug("Initialising `SystemState`...");
-        if let Err(err) = update_system_state(&SYSTEM_STATE).await {
-            return ExtendedResult::Err(exit_codes::SYSTEM_READ_FAILURE, err);
+        let system_state = Arc::new(SystemState::new());
+        if let Err(err) = system_state.update().await {
+            return results::ExtendedResult::Err(exit_codes::SYSTEM_READ_FAILURE, err.into());
         }
-    }
+
+        system_state
+    };
 
     logger::debug("Initialising `TerminationToken`...");
     let termination_token = Arc::new(TerminationToken::new());
@@ -77,11 +68,15 @@ pub async fn runs_app(addr: &str, port: Option<u16>) -> results::ExtendedResult<
     expand_paths!(
         (
             "/state",
-            hooks::SystemStateHook::new(Arc::clone(&app_state), &SYSTEM_STATE, false)
+            hooks::SystemStateHook::new(Arc::clone(&app_state), Arc::clone(&system_state), false)
+        ),
+        (
+            "/state/",
+            hooks::SystemStateHook::new(Arc::clone(&app_state), Arc::clone(&system_state), false)
         ),
         (
             "/state/:subset",
-            hooks::SystemStateHook::new(Arc::clone(&app_state), &SYSTEM_STATE, true)
+            hooks::SystemStateHook::new(Arc::clone(&app_state), Arc::clone(&system_state), true)
         ),
     );
 
@@ -96,7 +91,7 @@ pub async fn runs_app(addr: &str, port: Option<u16>) -> results::ExtendedResult<
         },
         result = feature_gated!(
             "system_state" => system_state_task(
-                &SYSTEM_STATE,
+                Arc::clone(&system_state),
                 Duration::from_secs(config::SYSTEM_STATE_REFRESH_RATE),
             )
         ) => {
