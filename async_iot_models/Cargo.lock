@@ -3,9 +3,21 @@
 version = 3
 
 [[package]]
+name = "async-trait"
+version = "0.1.71"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a564d521dd56509c4c47480d00b80ee55f7e385ae48db5744c67ad50c92d2ebf"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.25",
+]
+
+[[package]]
 name = "async_iot_models"
 version = "0.1.0"
 dependencies = [
+ "async-trait",
  "lazy_static",
  "psutil",
  "pyo3",

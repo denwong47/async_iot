@@ -328,6 +328,7 @@ dependencies = [
 name = "async_iot"
 version = "0.1.0"
 dependencies = [
+ "async-trait",
  "async_iot_client",
  "async_iot_host",
  "async_iot_models",
@@ -379,6 +380,7 @@ dependencies = [
 name = "async_iot_models"
 version = "0.1.0"
 dependencies = [
+ "async-trait",
  "lazy_static",
  "psutil",
  "serde",

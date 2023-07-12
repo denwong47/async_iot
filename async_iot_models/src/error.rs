@@ -7,6 +7,9 @@ use pyo3::{PyErr, PyTypeInfo};
 #[derive(Error, Debug)]
 #[non_exhaustive]
 pub enum LocalError {
+    #[error("A lock for {0} is poisoned; execution cannot continue.")]
+    LockPoisoned(&'static str),
+
     #[error("unknown error occurred: {context}")]
     Unknown { context: String },
 }

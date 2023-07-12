@@ -14,6 +14,7 @@ path = "src/rust/lib.rs"
 crate-type = ["cdylib"]
 
 [dependencies]
+async-trait = "0"
 async_iot_client = { path = "./async_iot_client" }
 async_iot_host = { path = "./async_iot_host" }
 async_iot_models = { path = "./async_iot_models" }

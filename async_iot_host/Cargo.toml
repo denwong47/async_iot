@@ -16,7 +16,7 @@ path = "src/main_system_state.rs"
 openssl = { version = '0.10', features = ["vendored"]}
 
 [features]
-default = []
+default = ["system_state"]
 system_state = []
 jsonl_logging = ["async_iot_models/jsonl_logging"]
 detailed_logging = []

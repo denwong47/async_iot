@@ -1,7 +1,9 @@
+use async_trait::async_trait;
+
 use sysinfo::{self, SystemExt};
 use systemstat::{self, Platform};
 
-use crate::{results, traits::ResultToOption};
+use crate::{results, traits::{ResultToOption, HasState}};
 
 use super::{
     cpu::cpu, disks::disks, memory::memory, networks::networks, system::system,
@@ -38,9 +40,12 @@ macro_rules! expand_fields {
                     psutil_sensors: sensors::temperatures(),
                 }
             }
+        }
 
+        #[async_trait]
+        impl HasState for SystemState {
             /// Get a [`results::ResultJson`] with only the specified keys.
-            pub fn get(
+            async fn get(
                 &self,
                 keys: &[&str],
             ) -> results::ResultJson {
@@ -62,14 +67,14 @@ macro_rules! expand_fields {
 
             /// Get a [`results::ResultJson`] with all the available
             /// keys.
-            pub fn all(&self) -> results::ResultJson {
+            async fn all(&self) -> results::ResultJson {
                 self.get(
                     &[
                         $(
                             stringify!($field),
                         )*
                     ]
-                )
+                ).await
             }
         }
     }

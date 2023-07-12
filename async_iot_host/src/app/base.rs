@@ -41,7 +41,7 @@ pub async fn runs_app(addr: &str, port: Option<u16>) -> results::ExtendedResult<
     #[cfg(feature = "system_state")]
     {
         logger::debug("Initialising `SystemState`...");
-        if let Err(err) = update_system_state(&SYSTEM_STATE) {
+        if let Err(err) = update_system_state(&SYSTEM_STATE).await {
             return ExtendedResult::Err(exit_codes::SYSTEM_READ_FAILURE, err);
         }
     }

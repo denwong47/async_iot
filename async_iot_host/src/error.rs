@@ -2,6 +2,8 @@ use thiserror::Error;
 
 use tide;
 
+use async_iot_models::LocalError;
+
 /// Various Error types that can arise from Graphaurus operations.
 #[derive(Error, Debug)]
 #[non_exhaustive]
@@ -25,4 +27,13 @@ pub enum AppError {
 
     #[error("unknown error occurred: {context}")]
     Unknown { context: String },
+}
+
+impl From<LocalError> for AppError {
+    fn from(value: LocalError) -> Self {
+        match value {
+            LocalError::LockPoisoned(msg) => Self::LockPoisoned(msg),
+            err => Self::Unknown { context: err.to_string() },
+        }
+    }
 }

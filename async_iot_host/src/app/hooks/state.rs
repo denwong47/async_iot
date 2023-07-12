@@ -4,7 +4,7 @@ use async_trait::async_trait;
 use http_types::mime;
 use tide::{self, prelude::*, Endpoint};
 
-use async_iot_models::{logger, results, system_state::SystemState, traits::ResultToOption};
+use async_iot_models::{logger, results, system_state::SystemState, traits::{HasState, ResultToOption}};
 
 use crate::app::AppState;
 use crate::error::AppError;
@@ -58,44 +58,51 @@ where
             None
         };
 
-        self.lock
+        let body_opt = self.lock
             .read()
             .map_err(|_| tide::Error::new(500, AppError::LockPoisoned("lock for `SystemState`")))
             .and_then(|state_opt| {
-                let body = match (state_opt.as_ref(), subset) {
-                    (Some(state), Some(subset)) => tide::Body::from_json(&state.get(&subset)),
-                    (Some(state), None) => tide::Body::from_json(&state),
-                    (None, Some(subset)) => {
-                        logger::debug(
-                            "Generating new subsetted `SystemState` as global instance is `None`.",
-                        );
-                        tide::Body::from_json(&SystemState::new().get(&subset))
-                    }
-                    (None, None) => {
-                        logger::debug("Generating new `SystemState` as global instance is `None`.");
-                        tide::Body::from_json(&SystemState::new().all())
-                    }
-                };
+                match (state_opt.as_ref(), &subset) {
+                    (Some(state), Some(subset)) => tide::Body::from_json(&state.get(&subset)).map(|v| Some(v)),
+                    (Some(state), None) => tide::Body::from_json(&state).map(|v| Some(v)),
+                    _ => Ok(None),
+                }
+            })
+        ?;
 
-                body.map(|body| {
-                    tide::Response::builder(200)
-                        .body(body)
-                        .content_type(mime::JSON)
-                        .build()
-                })
+        // This is only necessary because we need an async block
+        let body = match (body_opt, subset) {
+            (Some(body), _) => Ok(body),
+            (None, Some(subset)) => {
+                logger::debug(
+                    "Generating new subsetted `SystemState` as global instance is `None`.",
+                );
+                tide::Body::from_json(&SystemState::new().get(&subset).await)
+            }
+            (None, None) => {
+                logger::debug("Generating new `SystemState` as global instance is `None`.");
+                tide::Body::from_json(&SystemState::new().all().await)
+            }
+        };
+
+        body.map(|body| {
+            tide::Response::builder(200)
+                .body(body)
+                .content_type(mime::JSON)
+                .build()
+        })
+        .or_else(|err| {
+            tide::Body::from_json(&results::ResultJson::with_capacity(1).add_result(
+                &"host",
+                results::ResultState::Err(err.to_string()),
+                json!({}),
+            ))
+            .and_then(|body| {
+                Ok(tide::Response::builder(500)
+                    .body(body)
+                    .content_type(mime::JSON)
+                    .build())
             })
-            .or_else(|err| {
-                tide::Body::from_json(&results::ResultJson::with_capacity(1).add_result(
-                    &"host",
-                    results::ResultState::Err(err.to_string()),
-                    json!({}),
-                ))
-                .and_then(|body| {
-                    Ok(tide::Response::builder(500)
-                        .body(body)
-                        .content_type(mime::JSON)
-                        .build())
-                })
-            })
+        })
     }
 }
