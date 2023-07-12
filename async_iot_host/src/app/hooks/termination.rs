@@ -47,8 +47,8 @@ where
                         &results::ResultJson::with_capacity(1).add_result(
                             &"host",
                             results::ResultState::Ok,
-                            json!({"termination": true}
-                            ),
+                            json!({"termination": true}),
+                            None,
                         ),
                     )?)
                     .content_type(mime::JSON)
@@ -107,6 +107,7 @@ where
                         &"host",
                         results::ResultState::Err(err.to_string()),
                         json!({"termination": false}),
+                        None,
                     ),
                 )?)
                 .content_type(mime::JSON)

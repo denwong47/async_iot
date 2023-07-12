@@ -32,6 +32,7 @@ where
             &"info",
             results::ResultState::Ok,
             &self.app_state,
+            None,
         ))?;
 
         Ok(tide::Response::builder(200)

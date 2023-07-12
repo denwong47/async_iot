@@ -1,6 +1,7 @@
 use std::error::Error;
 
-use serde::{ser::SerializeMap, Serialize};
+use serde::Serialize;
+use serde_json::{self, Value as JsonValue};
 
 use super::ExtendedResult;
 /// Result of getting a system state item.
@@ -38,29 +39,41 @@ where
     }
 }
 
+impl From<&ResultState> for JsonValue {
+    fn from(value: &ResultState) -> Self {
+        match value {
+            ResultState::Ok => serde_json::json!({
+                "_status": "ok",
+            }),
+            ResultState::WithWarnings(warnings) => serde_json::json!({
+                "_status": "ok",
+                "_warnings": warnings,
+            }),
+            ResultState::Err(msg) => serde_json::json!({
+                "_status": "error",
+                "_error": &msg,
+            }),
+        }
+    }
+}
+
+impl From<&ResultState> for serde_json::Map<String, JsonValue> {
+    fn from(value: &ResultState) -> Self {
+        if let JsonValue::Object(map) = value.into() {
+            map
+        } else {
+            panic!(
+                "`ResultState` did not produce a `serde_json::Value::Object(map)` - please check `impl From<&ResultState> for JsonValue` implementation."
+            )
+        }
+    }
+}
+
 impl Serialize for ResultState {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: serde::Serializer,
     {
-        match self {
-            Self::Ok => {
-                let mut state = serializer.serialize_map(Some(1))?;
-                state.serialize_entry("status", "ok")?;
-                state.end()
-            }
-            Self::WithWarnings(warnings) => {
-                let mut state = serializer.serialize_map(Some(2))?;
-                state.serialize_entry("status", "ok")?;
-                state.serialize_entry("warnings", warnings)?;
-                state.end()
-            }
-            Self::Err(msg) => {
-                let mut state = serializer.serialize_map(Some(2))?;
-                state.serialize_entry("status", "error")?;
-                state.serialize_entry("error", &msg)?;
-                state.end()
-            }
-        }
+        JsonValue::from(self).serialize(serializer)
     }
 }

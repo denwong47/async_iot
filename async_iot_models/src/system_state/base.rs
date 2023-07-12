@@ -67,6 +67,7 @@ macro_rules! expand_fields {
                             &stringify!($field),
                             results::ResultState::from(&result),
                             result.to_option(),
+                            None,
                         );
                     }
                 )*

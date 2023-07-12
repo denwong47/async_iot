@@ -14,6 +14,7 @@ pub async fn info(req: tide::Request<()>) -> tide::Result {
         &"info",
         results::ResultState::Ok,
         json!({}),
+        None,
     ))?;
 
     Ok(tide::Response::builder(200)
