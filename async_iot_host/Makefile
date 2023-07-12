@@ -8,7 +8,7 @@ TARGET:=
 
 define build_release
 	@echo "$(BLUE)Building target '$(TARGET)'$(RESET)"...
-	cross build --release --target=$(TARGET) --bin async_iot_system_state --features=system_state
+	cross build --release --target=$(TARGET) --bin async_iot_host --features=system_state
 	@if [ $?==0 ]; then echo "$(GREEN)'$(TARGET)' successfully built.$(RESET)"; else echo "$(RED)'$(TARGET)' build failed!"; fi
 endef
 

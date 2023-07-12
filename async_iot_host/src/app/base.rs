@@ -4,7 +4,7 @@ use std::{sync::Arc, time::Duration};
 #[allow(unused_imports)]
 use tide::{self, prelude::*};
 
-use async_iot_models::{logger, results, system_state::SystemState, traits::HasCachedState};
+use async_iot_models::{logger, results};
 
 use super::{hooks, AppState, TerminationToken};
 use crate::{config, error::AppError};
@@ -16,7 +16,7 @@ use crate::feature_gated;
 use super::system_state_task;
 
 #[cfg(feature = "system_state")]
-use async_iot_models::exit_codes;
+use async_iot_models::{exit_codes, system_state::SystemState, traits::HasCachedState};
 
 /// Runs the host app.
 pub async fn runs_app(addr: &str, port: Option<u16>) -> results::ExtendedResult<(), AppError> {
