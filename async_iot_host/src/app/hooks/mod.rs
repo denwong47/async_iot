@@ -5,9 +5,9 @@ mod misc;
 pub use misc::*;
 
 #[cfg(feature = "system_state")]
-mod state;
+mod system;
 #[cfg(feature = "system_state")]
-pub use state::*;
+pub use system::*;
 
 mod termination;
 pub use termination::*;

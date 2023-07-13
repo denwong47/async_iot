@@ -6,7 +6,7 @@ use time;
 
 use super::ResultState;
 
-use crate::{config, traits::ResultToOption};
+use crate::{config, logger, traits::ResultToOption};
 
 #[derive(Clone, Debug)]
 pub struct ResultJsonEntry {
@@ -78,6 +78,12 @@ impl ResultJsonEntry {
     /// Chained method for adding any number of children to this [`ResultJsonEntry`].
     pub fn with_children(mut self, mut children: Vec<Self>) -> Self {
         if self.children.is_none() {
+            logger::warning(
+                &format!(
+                    "Key {key} is a scalar value, but `with_children` is called on it. The existing value will be moved to a subkey of `_value`.",
+                    key=&self.key
+                )
+            );
             self.children = Some(Vec::new());
         };
 

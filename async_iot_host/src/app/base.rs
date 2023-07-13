@@ -67,15 +67,15 @@ pub async fn runs_app(addr: &str, port: Option<u16>) -> results::ExtendedResult<
     #[cfg(feature = "system_state")]
     expand_paths!(
         (
-            "/state",
+            "/system",
             hooks::SystemStateHook::new(Arc::clone(&app_state), Arc::clone(&system_state), false)
         ),
         (
-            "/state/",
+            "/system/",
             hooks::SystemStateHook::new(Arc::clone(&app_state), Arc::clone(&system_state), false)
         ),
         (
-            "/state/:subset",
+            "/system/:subset",
             hooks::SystemStateHook::new(Arc::clone(&app_state), Arc::clone(&system_state), true)
         ),
     );
