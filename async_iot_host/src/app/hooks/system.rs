@@ -37,7 +37,7 @@ where
 {
     async fn call(&self, req: tide::Request<State>) -> tide::Result {
         // TODO Refactor this to not hard code the path
-        drop(self.app_state.log_visit("/state", req.remote()));
+        drop(self.app_state.log_visit("/system", req.remote()));
 
         let subset = if self.subset {
             req.param("subset")
@@ -45,7 +45,7 @@ where
                 .to_option()
                 .and_then(|subset| {
                     if subset.get(0).unwrap_or(&"").len() == 0 {
-                        // Treat `/state/` as `/state`
+                        // Treat `/system/` as `/system`
                         None
                     } else {
                         Some(subset)

@@ -63,10 +63,7 @@ impl ResultJsonEntry {
     }
 
     /// Instantiate a new instance of [`ResultJsonEntry`] with a scalar value.
-    pub fn new_mapping<T>(key: String, state: ResultState) -> Self
-    where
-        serde_json::Value: From<T>,
-    {
+    pub fn new_mapping(key: String, state: ResultState) -> Self {
         Self {
             key,
             state,
@@ -93,6 +90,11 @@ impl ResultJsonEntry {
         self
     }
 
+    /// Chained method for adding a child entry of the same type.
+    pub fn add_child_entry(self, entry: Self) -> Self {
+        self.with_children(vec![entry])
+    }
+
     /// Chained method for adding a child to this [`ResultJsonEntry`].
     pub fn add_scalar_child(
         self,
@@ -101,6 +103,20 @@ impl ResultJsonEntry {
         value: Option<JsonValue>,
     ) -> Self {
         self.with_children(vec![Self::new_scalar(key, state, value)])
+    }
+
+    /// Create a new instance of [`ResultJson`] from a [`JsonValue`].
+    pub fn from_value(key: &str, value: JsonValue) -> Self {
+        match value {
+            JsonValue::Null => Self::new_scalar::<()>(key.to_string(), ResultState::Ok, None),
+            JsonValue::Object(map) => Self::new_mapping(key.to_string(), ResultState::Ok)
+                .with_children(
+                    map.into_iter()
+                        .map(|(key, value)| Self::from_value(&key, value))
+                        .collect(),
+                ),
+            value => Self::new_scalar(key.to_string(), ResultState::Ok, Some(value)),
+        }
     }
 }
 
