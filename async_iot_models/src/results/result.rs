@@ -1,6 +1,6 @@
 use std::{error::Error, process};
 
-use crate::{exit_codes, traits::ResultToOption};
+use crate::{exit_codes, logger, traits::ResultToOption};
 
 /// An expanded [`std::result::Result`] with an added variant for attaching
 /// warnings.
@@ -55,6 +55,11 @@ where
         match self {
             Self::Ok(_) => process::ExitCode::SUCCESS,
             Self::WithWarnings(_, warnings) => {
+                let message = format!(
+                    "\u{1b}[33m{count:} warning(s) generated upon exit.\u{1b}[39m",
+                    count = warnings.len()
+                );
+                logger::warning(&message);
                 println!(
                     "\u{1b}[33mThe following warnings are generated upon exit:\n\n{}\u{1b}[39m",
                     warnings
@@ -66,6 +71,10 @@ where
                 process::ExitCode::SUCCESS
             }
             Self::Err(status, err) => {
+                logger::critical(&format!(
+                    "{}",
+                    format!("\u{1b}[31mError: {}\u{1b}[39m", err)
+                ));
                 println!("\u{1b}[31mError:\n\n{}\u{1b}[39m", err);
 
                 process::ExitCode::from(status)

@@ -1,3 +1,4 @@
+use std::io;
 use thiserror::Error;
 
 use tide;
@@ -10,6 +11,9 @@ use async_iot_models::LocalError;
 pub enum AppError {
     #[error("A lock for {0} is poisoned; execution cannot continue.")]
     LockPoisoned(&'static str),
+
+    #[error("App at {addr} failed to start up: {err}")]
+    ServerStartUpError { addr: String, err: io::Error },
 
     #[error("HTTP host encountered an error: {0:?}")]
     TideError(tide::Error),

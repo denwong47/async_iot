@@ -86,8 +86,8 @@ pub async fn runs_app(addr: &str, port: Option<u16>) -> results::ExtendedResult<
     // - The task listening to termination events.
     logger::debug("Starting Tokio Select...");
     tokio::select! {
-        _ = app.listen(&listen_target) => {
-            unreachable!()
+        result = app.listen(&listen_target) => {
+            result.map_err(|err| AppError::ServerStartUpError { addr: listen_target, err: err }).into()
         },
         result = feature_gated!(
             "system_state" => system_state_task(
