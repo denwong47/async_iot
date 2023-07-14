@@ -6,7 +6,10 @@ use time;
 
 use super::{ExtendedResult, ResultState};
 
-use crate::{config, logger, traits::ResultToOption};
+use crate::{
+    config, logger,
+    traits::{FromWithKey, ResultToOption},
+};
 
 #[derive(Clone, Debug)]
 pub struct ResultJsonEntry {
@@ -112,20 +115,6 @@ impl ResultJsonEntry {
         self
     }
 
-    /// Create a new instance of [`ResultJson`] from a [`JsonValue`].
-    pub fn from_value(key: &str, value: JsonValue) -> Self {
-        match value {
-            JsonValue::Null => Self::new_scalar::<()>(key.to_string(), ResultState::Ok, None),
-            JsonValue::Object(map) => Self::new_mapping(key.to_string(), ResultState::Ok)
-                .with_children(
-                    map.into_iter()
-                        .map(|(key, value)| Self::from_value(&key, value))
-                        .collect(),
-                ),
-            value => Self::new_scalar(key.to_string(), ResultState::Ok, Some(value)),
-        }
-    }
-
     /// Create a new instance of [`ResultJsonEntry`] from an Error by populating it into all
     /// the keys supplied.
     pub fn from_err<E>(key: &str, value: E) -> Self
@@ -139,32 +128,61 @@ impl ResultJsonEntry {
         )
     }
 
-    /// Create a new instance of [`ResultJson`] from a [`Result<JsonValue, E>`].
-    pub fn from_result<E>(key: &str, value: Result<JsonValue, E>) -> Self
-    where
-        E: ToString,
-    {
-        match value {
-            Ok(value) => Self::from_value(key, value),
-            Err(err) => Self::from_err(key, err),
-        }
-    }
-
-    /// Create a new instance of [`ResultJson`] from a [`ExtendedResult<T, E>`].
-    pub fn from_extended_result<T, E>(key: &str, value: ExtendedResult<T, E>) -> Self
+    /// Create a new instance of [`ResultJson`] from an instance that can [`Serialize`].
+    pub fn from_serializable<T, E>(key: &str, value: &T) -> Self
     where
         T: Serialize,
         E: ToString,
     {
-        match value {
-            ExtendedResult::Ok(inner_value) => {
-                Self::from_result(key, serde_json::to_value(inner_value))
+        match serde_json::to_value(value) {
+            Ok(value) => Self::from_with_key(key, value),
+            Err(err) => Self::from_err(key, err),
+        }
+    }
+}
+
+mod implement_from_with_key {
+    use super::*;
+
+    impl<T> FromWithKey<T> for ResultJsonEntry
+    where
+        T: Serialize,
+    {
+        fn from_with_key(key: &str, value: T) -> Self {
+            let value = serde_json::to_value(value);
+
+            match value {
+                Ok(JsonValue::Null) => {
+                    Self::new_scalar::<()>(key.to_string(), ResultState::Ok, None)
+                }
+                Ok(JsonValue::Object(map)) => Self::new_mapping(key.to_string(), ResultState::Ok)
+                    .with_children(
+                        map.into_iter()
+                            .map(|(key, value)| Self::from_with_key(&key, value))
+                            .collect(),
+                    ),
+                Ok(value) => Self::new_scalar(key.to_string(), ResultState::Ok, Some(value)),
+                Err(err) => Self::from_err(key, err),
             }
-            ExtendedResult::WithWarnings(inner_value, warnings) => {
-                Self::from_result(key, serde_json::to_value(inner_value))
-                    .with_state(ResultState::WithWarnings(warnings))
+        }
+    }
+
+    impl<T, E> FromWithKey<ExtendedResult<T, E>> for ResultJsonEntry
+    where
+        Self: FromWithKey<T>,
+        E: ToString,
+    {
+        fn from_with_key(key: &str, value: ExtendedResult<T, E>) -> Self {
+            match value {
+                ExtendedResult::Ok(inner_value) => {
+                    FromWithKey::<T>::from_with_key(key, inner_value)
+                }
+                ExtendedResult::WithWarnings(inner_value, warnings) => {
+                    let entry: Self = FromWithKey::<T>::from_with_key(key, inner_value);
+                    entry.with_state(ResultState::WithWarnings(warnings))
+                }
+                ExtendedResult::Err(_exit_code, err) => Self::from_err(key, err),
             }
-            ExtendedResult::Err(_exit_code, err) => Self::from_err(key, err),
         }
     }
 }

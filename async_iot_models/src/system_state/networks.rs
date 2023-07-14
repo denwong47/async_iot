@@ -6,7 +6,10 @@ use systemstat::{self, data::IpAddr, NetworkAddrs, NetworkStats, Platform};
 use serde_json;
 
 use super::SystemState;
-use crate::results::{self, ExtendedResult};
+use crate::{
+    results::{self, ExtendedResult},
+    traits::FromWithKey,
+};
 
 /// A state for a network interface.
 #[derive(Clone, Debug, Serialize)]
@@ -80,9 +83,7 @@ pub fn networks(key: &str, sys: &SystemState) -> results::ResultJsonEntry {
                 |entry, (name, addrs, stats)| {
                     let result = InterfaceState::try_from_systemstat(&name, addrs, stats);
 
-                    entry.add_child_entry(results::ResultJsonEntry::from_extended_result(
-                        &name, result,
-                    ))
+                    entry.add_child_entry(results::ResultJsonEntry::from_with_key(&name, result))
                 },
             ),
         Err(err) => results::ResultJsonEntry::from_err(key, err),

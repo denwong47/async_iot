@@ -337,7 +337,7 @@ dependencies = [
  "pyo3",
  "serde",
  "serde-pickle",
- "serde_with",
+ "serde_with 2.3.3",
  "strum",
  "systemstat",
  "timeit",
@@ -383,6 +383,7 @@ dependencies = [
  "async-trait",
  "lazy_static",
  "psutil",
+ "reqwest",
  "serde",
  "serde_json",
  "strum",
@@ -390,19 +391,25 @@ dependencies = [
  "systemstat",
  "thiserror",
  "time 0.3.23",
+ "url",
 ]
 
 [[package]]
 name = "async_iot_vendors"
 version = "0.1.0"
 dependencies = [
+ "async-trait",
+ "async_iot_models",
+ "enum_index",
  "lazy_static",
  "reqwest",
  "serde",
  "serde_json",
+ "serde_with 3.0.0",
  "strum",
  "thiserror",
  "time 0.3.23",
+ "url",
 ]
 
 [[package]]
@@ -862,6 +869,36 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "071a31f4ee85403370b58aca746f01041ede6f0da2730960ad001edc2b71b394"
 dependencies = [
  "cfg-if 1.0.0",
+]
+
+[[package]]
+name = "enum_index"
+version = "0.1.2"
+source = "git+https://github.com/denwong47/enum_index?branch=development#920dec32a265fb29adb2516794052074f2b23561"
+dependencies = [
+ "enum_index_macros",
+ "enum_index_types",
+]
+
+[[package]]
+name = "enum_index_macros"
+version = "0.1.2"
+source = "git+https://github.com/denwong47/enum_index?branch=development#920dec32a265fb29adb2516794052074f2b23561"
+dependencies = [
+ "enum_index_types",
+ "proc-macro2",
+ "quote",
+ "syn 2.0.25",
+]
+
+[[package]]
+name = "enum_index_types"
+version = "0.1.2"
+source = "git+https://github.com/denwong47/enum_index?branch=development#920dec32a265fb29adb2516794052074f2b23561"
+dependencies = [
+ "serde",
+ "syn 2.0.25",
+ "thiserror",
 ]
 
 [[package]]
@@ -2285,7 +2322,23 @@ dependencies = [
  "indexmap",
  "serde",
  "serde_json",
- "serde_with_macros",
+ "serde_with_macros 2.3.3",
+ "time 0.3.23",
+]
+
+[[package]]
+name = "serde_with"
+version = "3.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9f02d8aa6e3c385bf084924f660ce2a3a6bd333ba55b35e8590b321f35d88513"
+dependencies = [
+ "base64 0.21.2",
+ "chrono",
+ "hex",
+ "indexmap",
+ "serde",
+ "serde_json",
+ "serde_with_macros 3.0.0",
  "time 0.3.23",
 ]
 
@@ -2294,6 +2347,18 @@ name = "serde_with_macros"
 version = "2.3.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "881b6f881b17d13214e5d494c939ebab463d01264ce1811e9d4ac3a882e7695f"
+dependencies = [
+ "darling",
+ "proc-macro2",
+ "quote",
+ "syn 2.0.25",
+]
+
+[[package]]
+name = "serde_with_macros"
+version = "3.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "edc7d5d3932fb12ce722ee5e64dd38c504efba37567f0c402f6ca728c3b8b070"
 dependencies = [
  "darling",
  "proc-macro2",

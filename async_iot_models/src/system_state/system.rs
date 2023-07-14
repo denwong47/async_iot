@@ -2,11 +2,11 @@ use serde_json;
 use sysinfo::{self, SystemExt};
 
 use super::SystemState;
-use crate::results;
+use crate::{results, traits::FromWithKey};
 
 /// Get the system details.
 pub fn system(key: &str, sys: &SystemState) -> results::ResultJsonEntry {
-    results::ResultJsonEntry::from_value(
+    results::ResultJsonEntry::from_with_key(
         key,
         serde_json::json!(
             {

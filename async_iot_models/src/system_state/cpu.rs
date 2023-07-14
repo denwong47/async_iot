@@ -5,7 +5,7 @@ use sysinfo::{self, CpuExt, SystemExt};
 use systemstat::{self, Platform};
 
 use super::SystemState;
-use crate::results;
+use crate::{results, traits::FromWithKey};
 
 /// Convert the CPU details into our proprietary JSON format.
 fn cpu_to_json(cpu: &sysinfo::Cpu) -> Value {
@@ -64,18 +64,18 @@ pub fn cpu(key: &str, sys: &SystemState) -> results::ResultJsonEntry {
     let cpu_cores: Vec<Value> = sys.sysinfo.cpus().iter().map(cpu_to_json).collect();
 
     cpu_to_result_json(key, cpu_globals).with_children(vec![
-        results::ResultJsonEntry::from_result(
+        results::ResultJsonEntry::from_with_key(
             "physicalCoresCount",
             sys.sysinfo
                 .physical_core_count()
                 .and_then(|int| Some(serde_json::Value::Number(int.into())))
                 .ok_or(format!("Unable to get CPU physical core count.")),
         ),
-        results::ResultJsonEntry::from_result::<String>(
+        FromWithKey::<Result<Value, String>>::from_with_key(
             "cores",
             Ok(serde_json::Value::Array(cpu_cores)),
         ),
-        results::ResultJsonEntry::from_result(
+        results::ResultJsonEntry::from_with_key(
             "load",
             cpu_load
                 .map_err(|err| err.to_string())

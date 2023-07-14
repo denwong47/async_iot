@@ -10,6 +10,12 @@ pub enum LocalError {
     #[error("A lock for {0} is poisoned; execution cannot continue.")]
     LockPoisoned(&'static str),
 
+    #[error("Could not complete a HTTP request: {context}")]
+    HTTPRequestFailed { context: String },
+
+    #[error("The URL requested is invalid: {context}")]
+    InvalidURL { context: String },
+
     #[error("unknown error occurred: {context}")]
     Unknown { context: String },
 }
@@ -22,5 +28,21 @@ impl LocalError {
         E: PyTypeInfo,
     {
         PyErr::new::<E, _>(self.to_string())
+    }
+}
+
+impl From<reqwest::Error> for LocalError {
+    fn from(value: reqwest::Error) -> Self {
+        Self::HTTPRequestFailed {
+            context: value.to_string(),
+        }
+    }
+}
+
+impl From<url::ParseError> for LocalError {
+    fn from(value: url::ParseError) -> Self {
+        Self::InvalidURL {
+            context: value.to_string(),
+        }
     }
 }

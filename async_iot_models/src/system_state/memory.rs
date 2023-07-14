@@ -2,7 +2,7 @@ use serde_json;
 use sysinfo::{self, SystemExt};
 
 use super::SystemState;
-use crate::results;
+use crate::{results, traits::FromWithKey};
 
 /// Get details about current memory usage.
 pub fn memory(key: &str, sys: &SystemState) -> results::ResultJsonEntry {
@@ -27,8 +27,8 @@ pub fn memory(key: &str, sys: &SystemState) -> results::ResultJsonEntry {
 
     results::ResultJsonEntry::new_mapping(key.to_owned(), results::ResultState::Ok).with_children(
         vec![
-            results::ResultJsonEntry::from_value("physical", physical),
-            results::ResultJsonEntry::from_value("swap", swap),
+            results::ResultJsonEntry::from_with_key("physical", physical),
+            results::ResultJsonEntry::from_with_key("swap", swap),
         ],
     )
 }

@@ -12,3 +12,4 @@ pub mod results;
 pub mod system_state;
 
 pub mod traits;
+pub use traits::end_point_type;
