@@ -4,7 +4,7 @@ use serde::Serialize;
 use serde_json::{self, Value as JsonValue};
 use time;
 
-use super::ResultState;
+use super::{ExtendedResult, ResultState};
 
 use crate::{config, logger, traits::ResultToOption};
 
@@ -105,6 +105,13 @@ impl ResultJsonEntry {
         self.with_children(vec![Self::new_scalar(key, state, value)])
     }
 
+    /// Chained method for changing the state of this [`ResultJsonEntry`].
+    pub fn with_state(mut self, state: ResultState) -> Self {
+        self.state = state;
+
+        self
+    }
+
     /// Create a new instance of [`ResultJson`] from a [`JsonValue`].
     pub fn from_value(key: &str, value: JsonValue) -> Self {
         match value {
@@ -116,6 +123,48 @@ impl ResultJsonEntry {
                         .collect(),
                 ),
             value => Self::new_scalar(key.to_string(), ResultState::Ok, Some(value)),
+        }
+    }
+
+    /// Create a new instance of [`ResultJsonEntry`] from an Error by populating it into all
+    /// the keys supplied.
+    pub fn from_err<E>(key: &str, value: E) -> Self
+    where
+        E: ToString,
+    {
+        ResultJsonEntry::new_scalar(
+            key.to_string(),
+            ResultState::Err(value.to_string()),
+            Option::<JsonValue>::None,
+        )
+    }
+
+    /// Create a new instance of [`ResultJson`] from a [`Result<JsonValue, E>`].
+    pub fn from_result<E>(key: &str, value: Result<JsonValue, E>) -> Self
+    where
+        E: ToString,
+    {
+        match value {
+            Ok(value) => Self::from_value(key, value),
+            Err(err) => Self::from_err(key, err),
+        }
+    }
+
+    /// Create a new instance of [`ResultJson`] from a [`ExtendedResult<T, E>`].
+    pub fn from_extended_result<T, E>(key: &str, value: ExtendedResult<T, E>) -> Self
+    where
+        T: Serialize,
+        E: ToString,
+    {
+        match value {
+            ExtendedResult::Ok(inner_value) => {
+                Self::from_result(key, serde_json::to_value(inner_value))
+            }
+            ExtendedResult::WithWarnings(inner_value, warnings) => {
+                Self::from_result(key, serde_json::to_value(inner_value))
+                    .with_state(ResultState::WithWarnings(warnings))
+            }
+            ExtendedResult::Err(_exit_code, err) => Self::from_err(key, err),
         }
     }
 }
@@ -137,6 +186,12 @@ impl ResultJson {
         Self {
             results: Vec::with_capacity(capacity),
         }
+    }
+
+    /// Chained method for adding any number of children to this [`ResultJson`].
+    pub fn with_children(mut self, mut children: Vec<ResultJsonEntry>) -> Self {
+        self.results.append(&mut children);
+        self
     }
 
     /// Return a [`ResultJson`] down with only the included keys.
@@ -215,14 +270,14 @@ impl ResultJson {
 impl ResultJson {
     /// Create a new instance of [`ResultJson`] from an Error by populating it into all
     /// the keys supplied.
-    pub fn from_err<E>(value: E, keys: &[&str]) -> Self
+    pub fn from_err<E>(keys: &[&str], err: E) -> Self
     where
         E: Error,
     {
         keys.iter().fold(Self::new(), |json, key| {
             json.add_result(
                 key,
-                ResultState::Err(value.to_string()),
+                ResultState::Err(err.to_string()),
                 Option::<()>::None,
                 None,
             )

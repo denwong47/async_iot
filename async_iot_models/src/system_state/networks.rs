@@ -1,12 +1,12 @@
 use serde::Serialize;
 use serde_json::json;
-use std::{collections::HashMap, io};
+use std::io;
 use systemstat::{self, data::IpAddr, NetworkAddrs, NetworkStats, Platform};
 
 use serde_json;
 
 use super::SystemState;
-use crate::{exit_codes, results::ExtendedResult};
+use crate::results::{self, ExtendedResult};
 
 /// A state for a network interface.
 #[derive(Clone, Debug, Serialize)]
@@ -62,48 +62,29 @@ impl InterfaceState {
 }
 
 /// Get the current networks using systemstat.
-pub fn networks(
-    sys: &SystemState,
-) -> ExtendedResult<HashMap<String, Option<InterfaceState>>, io::Error> {
+pub fn networks(key: &str, sys: &SystemState) -> results::ResultJsonEntry {
     let try_networks = sys.systemstat.networks();
 
     match try_networks {
-        Ok(networks) => {
-            let (map, warnings) = networks
-                .into_iter()
-                .map(|(_, network)| {
-                    (
-                        network.name.clone(),
-                        network.addrs,
-                        sys.systemstat.network_stats(&network.name),
-                    )
-                })
-                .fold(
-                    (HashMap::new(), Vec::new()),
-                    |(mut map, mut warnings), (name, addrs, stats)| {
-                        let result = InterfaceState::try_from_systemstat(&name, addrs, stats);
+        Ok(networks) => networks
+            .into_iter()
+            .map(|(_, network)| {
+                (
+                    network.name.clone(),
+                    network.addrs,
+                    sys.systemstat.network_stats(&network.name),
+                )
+            })
+            .fold(
+                results::ResultJsonEntry::new_mapping(key.to_owned(), results::ResultState::Ok),
+                |entry, (name, addrs, stats)| {
+                    let result = InterfaceState::try_from_systemstat(&name, addrs, stats);
 
-                        map.insert(
-                            name,
-                            match result {
-                                ExtendedResult::Ok(state) => Some(state),
-                                ExtendedResult::WithWarnings(state, mut _warnings) => {
-                                    warnings.append(&mut _warnings);
-                                    Some(state)
-                                }
-                                ExtendedResult::Err(_, err) => {
-                                    warnings.push(err.to_string());
-                                    None
-                                }
-                            },
-                        );
-
-                        (map, warnings)
-                    },
-                );
-
-            ExtendedResult::Ok(map).with_warnings(warnings)
-        }
-        Err(err) => ExtendedResult::Err(exit_codes::SYSTEM_READ_FAILURE, err),
+                    entry.add_child_entry(results::ResultJsonEntry::from_extended_result(
+                        &name, result,
+                    ))
+                },
+            ),
+        Err(err) => results::ResultJsonEntry::from_err(key, err),
     }
 }

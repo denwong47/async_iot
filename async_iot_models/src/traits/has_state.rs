@@ -26,7 +26,7 @@ pub trait HasState {
     async fn get(&self, keys: &[&str]) -> results::ResultJson {
         match self.try_get(keys).await {
             Ok(json) => json,
-            Err(err) => results::ResultJson::from_err(err, keys),
+            Err(err) => results::ResultJson::from_err(keys, err),
         }
     }
 
@@ -34,7 +34,7 @@ pub trait HasState {
     async fn all(&self) -> results::ResultJson {
         match self.try_all().await {
             Ok(json) => json,
-            Err(err) => results::ResultJson::from_err(err, &self.available_keys()),
+            Err(err) => results::ResultJson::from_err(&self.available_keys(), err),
         }
     }
 }

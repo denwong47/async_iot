@@ -1,11 +1,11 @@
-use std::{io, thread::sleep, time::Duration};
+use std::{thread::sleep, time::Duration};
 
 use serde_json::{self, value::Value};
 use sysinfo::{self, CpuExt, SystemExt};
 use systemstat::{self, Platform};
 
 use super::SystemState;
-use crate::{results, traits::ResultToOption};
+use crate::results;
 
 /// Convert the CPU details into our proprietary JSON format.
 fn cpu_to_json(cpu: &sysinfo::Cpu) -> Value {
@@ -20,18 +20,40 @@ fn cpu_to_json(cpu: &sysinfo::Cpu) -> Value {
     )
 }
 
-/// Convert the CPU details into a mapping.
-fn cpu_to_map(cpu: &sysinfo::Cpu) -> serde_json::Map<String, Value> {
-    if let Value::Object(mapping) = cpu_to_json(cpu) {
-        mapping
-    } else {
-        serde_json::Map::new()
-    }
+fn cpu_to_result_json(key: &str, cpu: &sysinfo::Cpu) -> results::ResultJsonEntry {
+    results::ResultJsonEntry::new_mapping(key.to_owned(), results::ResultState::Ok).with_children(
+        vec![
+            results::ResultJsonEntry::new_scalar(
+                "name".to_owned(),
+                results::ResultState::Ok,
+                Some(cpu.name()),
+            ),
+            results::ResultJsonEntry::new_scalar(
+                "frequency".to_owned(),
+                results::ResultState::Ok,
+                Some(cpu.frequency()),
+            ),
+            results::ResultJsonEntry::new_scalar(
+                "usage".to_owned(),
+                results::ResultState::Ok,
+                Some(cpu.cpu_usage()),
+            ),
+            results::ResultJsonEntry::new_scalar(
+                "vendorId".to_owned(),
+                results::ResultState::Ok,
+                Some(cpu.vendor_id()),
+            ),
+            results::ResultJsonEntry::new_scalar(
+                "brand".to_owned(),
+                results::ResultState::Ok,
+                Some(cpu.brand()),
+            ),
+        ],
+    )
 }
 
 /// Get the current CPU details.
-pub fn cpu(sys: &SystemState) -> results::ExtendedResult<Value, io::Error> {
-    let mut warnings = Vec::new();
+pub fn cpu(key: &str, sys: &SystemState) -> results::ResultJsonEntry {
     let cpu_globals = sys.sysinfo.global_cpu_info();
 
     let cpu_load = sys.systemstat.cpu_load_aggregate().and_then(|cpu| {
@@ -41,57 +63,24 @@ pub fn cpu(sys: &SystemState) -> results::ExtendedResult<Value, io::Error> {
 
     let cpu_cores: Vec<Value> = sys.sysinfo.cpus().iter().map(cpu_to_json).collect();
 
-    let mut json = cpu_to_map(cpu_globals);
-    macro_rules! expand_fields {
-        (
-            $((
-                $field: literal,
-                $expr: expr
-            )),+$(,)?
-        ) => {
-            $(
-                json.insert(
-                    $field.to_owned(),
-                    serde_json::to_value(
-                        $expr
-                        .or_else(
-                            |err| {
-                                warnings.push(
-                                    format!(
-                                        "Failed to get '{}': {}",
-                                        $field,
-                                        err
-                                    )
-                                );
-                                Err(err)
-                            }
-                        )
-                        .to_option()
-                    )
-                    .unwrap_or_else(
-                        |err|
-                            format!(
-                                "Cannot serialize '{}' field: {}",
-                                $field,
-                                err
-                            )
-                            .into()
-                    )
-                );
-            )*
-        };
-    }
-
-    expand_fields!(
-        (
-            "physicalCoreCounts",
+    cpu_to_result_json(key, cpu_globals).with_children(vec![
+        results::ResultJsonEntry::from_result(
+            "physicalCoresCount",
             sys.sysinfo
                 .physical_core_count()
-                .ok_or("Cannot get CPU physical core count.")
+                .and_then(|int| Some(serde_json::Value::Number(int.into())))
+                .ok_or(format!("Unable to get CPU physical core count.")),
         ),
-        ("core", serde_json::to_value(&cpu_cores)),
-        ("load", cpu_load),
-    );
-
-    results::ExtendedResult::Ok(Value::Object(json)).with_warnings(warnings)
+        results::ResultJsonEntry::from_result::<String>(
+            "cores",
+            Ok(serde_json::Value::Array(cpu_cores)),
+        ),
+        results::ResultJsonEntry::from_result(
+            "load",
+            cpu_load
+                .map_err(|err| err.to_string())
+                .and_then(|load| serde_json::to_value(load).map_err(|err| err.to_string()))
+                .map_err(|err| format!("Unable to get CPU load: {err}")),
+        ),
+    ])
 }

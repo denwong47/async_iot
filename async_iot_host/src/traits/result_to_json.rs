@@ -15,7 +15,7 @@ pub trait ResultToJson {
 impl ResultToJson for Result<ResultJson, tide::Error> {
     /// Create a [`ResultJson`] from a [`Result<ResultJson, tide::Error>`].
     fn to_result_json(self, keys: &[&str]) -> ResultJson {
-        self.unwrap_or_else(|err| ResultJson::from_err(AppError::TideError(err), keys))
+        self.unwrap_or_else(|err| ResultJson::from_err(keys, AppError::TideError(err)))
     }
 
     fn to_tide_response(self, keys: &[&str]) -> tide::Response {
@@ -29,7 +29,7 @@ impl ResultToJson for Result<ResultJson, tide::Error> {
 
         tide::Response::builder(status_code)
             .body(result.unwrap_or_else(|err| {
-                tide::Body::from_json(&ResultJson::from_err(AppError::TideError(err), keys))
+                tide::Body::from_json(&ResultJson::from_err(keys, AppError::TideError(err)))
                     .unwrap()
             }))
             .content_type(mime::JSON)

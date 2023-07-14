@@ -1,4 +1,4 @@
-use std::{error::Error, process};
+use std::process;
 
 use crate::{exit_codes, logger, traits::ResultToOption};
 
@@ -7,7 +7,7 @@ use crate::{exit_codes, logger, traits::ResultToOption};
 #[derive(Clone, Debug)]
 pub enum ExtendedResult<T, E>
 where
-    E: Error,
+    E: ToString,
 {
     Ok(T),
     WithWarnings(T, Vec<String>),
@@ -16,7 +16,7 @@ where
 
 impl<T, E> ExtendedResult<T, E>
 where
-    E: Error,
+    E: ToString,
 {
     /// Attach warnings to this [`SystemStateResult`].
     ///
@@ -37,7 +37,7 @@ where
 impl<T, E> Default for ExtendedResult<T, E>
 where
     T: Default,
-    E: Error,
+    E: ToString,
 {
     /// For any `T` that supports default, an [`ExtendedResult::Ok(T::default())`]
     /// will be returned.
@@ -48,7 +48,7 @@ where
 
 impl<T, E> process::Termination for ExtendedResult<T, E>
 where
-    E: Error,
+    E: ToString,
 {
     /// Allow [`ExtendedResult`] to terminate a `main()`.
     fn report(self) -> process::ExitCode {
@@ -73,9 +73,9 @@ where
             Self::Err(status, err) => {
                 logger::critical(&format!(
                     "{}",
-                    format!("\u{1b}[31mError: {}\u{1b}[39m", err)
+                    format!("\u{1b}[31mError: {}\u{1b}[39m", err.to_string())
                 ));
-                println!("\u{1b}[31mError:\n\n{}\u{1b}[39m", err);
+                println!("\u{1b}[31mError:\n\n{}\u{1b}[39m", err.to_string());
 
                 process::ExitCode::from(status)
             }
@@ -85,7 +85,7 @@ where
 
 impl<T, E> From<std::result::Result<T, E>> for ExtendedResult<T, E>
 where
-    E: Error,
+    E: ToString,
 {
     fn from(value: std::result::Result<T, E>) -> Self {
         match value {
@@ -97,7 +97,7 @@ where
 
 impl<T, E> ResultToOption<T> for ExtendedResult<T, E>
 where
-    E: Error,
+    E: ToString,
 {
     fn to_option(self) -> Option<T> {
         match self {

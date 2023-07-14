@@ -1,4 +1,4 @@
-use std::{collections::HashMap, io};
+use std::io;
 
 use serde_json::value::{Number, Value};
 use systemstat::{self, Platform};
@@ -10,41 +10,22 @@ use crate::results;
 use serde_json::value::Map;
 
 /// Get temperatures of this machine.
-pub fn temperatures(
-    sys: &SystemState,
-) -> results::ExtendedResult<HashMap<&'static str, Value>, io::Error> {
-    let mut map = HashMap::new();
-    let mut warnings = Vec::new();
-
-    macro_rules! expand_fetchers {
-        (
-            $((
-                $key: ident,
-                $func: expr
-            )),*
-            $(,)?
-        ) => {
-            $(
-            match $func(sys) {
-                Ok(value) => {map.insert(stringify!($key), value);},
-                Err(msg) => warnings.push(msg.to_string()),
-            }
-            )*
-        };
-    }
-
-    expand_fetchers!((cpu, cpu_temp),);
-
-    #[cfg(target_os = "linux")]
-    expand_fetchers!((sensors, sensors_temp),);
-
-    #[cfg(not(target_os = "linux"))]
-    expand_fetchers!((sensors, |_| Err(io::Error::new(
-        io::ErrorKind::Unsupported,
-        "Sensor temperatures are only supported on Linux.".to_owned()
-    ))),);
-
-    results::ExtendedResult::Ok(map).with_warnings(warnings)
+pub fn temperatures(key: &str, sys: &SystemState) -> results::ResultJsonEntry {
+    results::ResultJsonEntry::new_mapping(key.to_owned(), results::ResultState::Ok).with_children(
+        vec![
+            results::ResultJsonEntry::from_result("cpu", cpu_temp(sys)),
+            #[cfg(target_os = "linux")]
+            results::ResultJsonEntry::from_result("sensors", sensors_temp(sys)),
+            #[cfg(not(target_os = "linux"))]
+            results::ResultJsonEntry::from_err(
+                "sensors",
+                io::Error::new(
+                    io::ErrorKind::Unsupported,
+                    "Sensor temperatures are only supported on Linux.".to_owned(),
+                ),
+            ),
+        ],
+    )
 }
 
 /// Internal function to fetch CPU temperature.

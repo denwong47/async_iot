@@ -6,7 +6,7 @@ use systemstat::{self, Platform};
 
 use crate::{
     results,
-    traits::{HasCachedState, HasState, ResultToOption},
+    traits::{HasCachedState, HasState},
     LocalError,
 };
 
@@ -29,6 +29,21 @@ pub struct SystemState {
     pub psutil_sensors: Vec<psutil::Result<sensors::TemperatureSensor>>,
 }
 
+impl SystemState {
+    /// Create a [`SystemState`] with the relevant [`System`] instances.
+    pub fn new() -> Self {
+        Self {
+            systemstat: systemstat::System::new(),
+            sysinfo: sysinfo::System::new_all(),
+
+            _cache: RwLock::new(None),
+
+            #[cfg(target_os = "linux")]
+            psutil_sensors: sensors::temperatures(),
+        }
+    }
+}
+
 macro_rules! expand_fields {
     (
         $((
@@ -36,21 +51,6 @@ macro_rules! expand_fields {
             $func: expr
         )),*$(,)?
     ) => {
-        impl SystemState {
-            /// Create a [`SystemState`] with the relevant [`System`] instances.
-            pub fn new() -> Self {
-                Self {
-                    systemstat: systemstat::System::new(),
-                    sysinfo: sysinfo::System::new_all(),
-
-                    _cache: RwLock::new(None),
-
-                    #[cfg(target_os = "linux")]
-                    psutil_sensors: sensors::temperatures(),
-                }
-            }
-        }
-
         #[async_trait]
         impl HasState for SystemState {
             /// Get a [`results::ResultJson`] with only the specified keys.
@@ -58,21 +58,27 @@ macro_rules! expand_fields {
                 &self,
                 keys: &[&str],
             ) -> Result<results::ResultJson, LocalError> {
-                let mut json = results::ResultJson::new();
-
-                $(
-                    if keys.contains(&stringify!($field)) {
-                        let result = $func(self);
-                        json.append_result(
-                            &stringify!($field),
-                            results::ResultState::from(&result),
-                            result.to_option(),
-                            None,
-                        );
-                    }
-                )*
-
-                Ok(json)
+                Ok(
+                    results::ResultJson::new()
+                    .with_children(
+                        {
+                            keys
+                            .iter()
+                            .map(
+                                |key| match key {
+                                    $(
+                                        &stringify!($field) => $func(&stringify!($field), self),
+                                    )*
+                                    _ => results::ResultJsonEntry::from_err(
+                                        key,
+                                        format!("Requested key of {key} not recgonised.")
+                                    )
+                                }
+                            )
+                            .collect()
+                        }
+                    )
+                )
             }
 
             /// Get a [`Vec`] of all the available keys for [`SystemState::get()`].
