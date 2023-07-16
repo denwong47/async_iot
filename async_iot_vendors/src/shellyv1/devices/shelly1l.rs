@@ -2,12 +2,12 @@ use serde::{Deserialize, Serialize};
 use url::Url;
 
 use async_iot_models::{
-    end_point_type,
+    auth, end_point_type,
     traits::{self, BuildWith},
     LocalError,
 };
 
-use super::super::{auth, states};
+use super::super::states;
 
 #[allow(dead_code)]
 #[derive(Clone, Serialize, Deserialize)]

@@ -100,36 +100,47 @@ impl<const ID: u8> traits::markers::ResponseSchema for Light<{ ID }> {}
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]
 pub struct LightGet<const ID: u8> {
     /// Accepted values are white and color
+    #[serde(skip_serializing_if = "Option::is_none")]
     mode: Option<LightMode>,
 
     /// Whether a timer is currently armed for this channel
+    #[serde(skip_serializing_if = "Option::is_none")]
     timer: Option<u64>,
 
     /// Command to turn on, off or toggle
+    #[serde(skip_serializing_if = "Option::is_none")]
     turn: Option<Turn>,
 
     /// Red brightness, 0..255, applies in mode="color"
+    #[serde(skip_serializing_if = "Option::is_none")]
     red: Option<u8>,
 
     /// Green brightness, 0..255, applies in mode="color"
+    #[serde(skip_serializing_if = "Option::is_none")]
     green: Option<u8>,
 
     /// Blue brightness, 0..255, applies in mode="color"
+    #[serde(skip_serializing_if = "Option::is_none")]
     blue: Option<u8>,
 
     /// White brightness, 0..255, applies in mode="color"
+    #[serde(skip_serializing_if = "Option::is_none")]
     white: Option<u8>,
 
     /// Gain for all channels, 0..100, applies in mode="color"
+    #[serde(skip_serializing_if = "Option::is_none")]
     gain: Option<u8>,
 
     /// Color temperature in K, 3000..6500, applies in mode="white"
+    #[serde(skip_serializing_if = "Option::is_none")]
     temp: Option<u16>,
 
     /// Brightness, 0..100, applies in mode="white"
+    #[serde(skip_serializing_if = "Option::is_none")]
     brightness: Option<u8>,
 
     /// Currently applied effect, description
+    #[serde(skip_serializing_if = "Option::is_none")]
     effect: Option<LightEffect>,
 }
 

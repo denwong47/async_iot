@@ -4,12 +4,12 @@ use std::sync::{Arc, RwLock};
 use url::Url;
 
 use async_iot_models::{
-    end_point_type, results,
+    auth, end_point_type, results,
     traits::{self, BuildWith, CanGet, EndPoint, FromWithKey},
     LocalError,
 };
 
-use super::super::{auth, states};
+use super::super::states;
 
 #[allow(dead_code)]
 pub struct Shelly1<const PM: bool> {

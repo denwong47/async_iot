@@ -75,3 +75,6 @@ docs/_build/
 **/envfile
 **/.env
 **/.credentials.json
+
+# Configurations
+**/host.json

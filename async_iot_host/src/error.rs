@@ -1,6 +1,8 @@
 use std::io;
 use thiserror::Error;
 
+use serde_json;
+
 use tide;
 
 use async_iot_models::LocalError;
@@ -11,6 +13,15 @@ use async_iot_models::LocalError;
 pub enum AppError {
     #[error("A lock for {0} is poisoned; execution cannot continue.")]
     LockPoisoned(&'static str),
+
+    #[error("Configuration not found at {path}: {err}")]
+    ConfigNotReadable { path: String, err: io::Error },
+
+    #[error("Cannot parse Configuration file at {path}: {err}")]
+    ConfigNotParsable {
+        path: String,
+        err: serde_json::Error,
+    },
 
     #[error("App at {addr} failed to start up: {err}")]
     ServerStartUpError { addr: String, err: io::Error },

@@ -4,6 +4,9 @@ use std::{sync::Arc, time::Duration};
 #[allow(unused_imports)]
 use tide::{self, prelude::*};
 
+#[allow(unused_imports)]
+use url::Url;
+
 use async_iot_models::{logger, results};
 
 use super::{hooks, AppState, TerminationToken};
@@ -18,9 +21,19 @@ use super::system_state_task;
 #[cfg(feature = "system_state")]
 use async_iot_models::{exit_codes, system_state::SystemState, traits::HasCachedState};
 
+#[cfg(feature = "shellyv1")]
+use async_iot_vendors::shellyv1;
+
+#[cfg(feature = "shellyv1")]
+use async_iot_models::auth::BasicAuthentication;
+
+#[cfg(feature = "shellyv1")]
+use super::shellyv1_task;
+
 /// Runs the host app.
-pub async fn runs_app(addr: &str, port: Option<u16>) -> results::ExtendedResult<(), AppError> {
-    let port = port.unwrap_or(config::DEFAULT_PORT);
+pub async fn runs_app(config: config::HostConfiguration) -> results::ExtendedResult<(), AppError> {
+    let addr = config.addr.unwrap_or(config::DEFAULT_ADDR.to_owned());
+    let port = config.port.unwrap_or(config::DEFAULT_PORT);
     let listen_target = format!("{addr}:{port}");
 
     logger::info(&format!("Starting app on {listen_target}."));
@@ -64,6 +77,7 @@ pub async fn runs_app(addr: &str, port: Option<u16>) -> results::ExtendedResult<
         ),
     );
 
+    // Refactor this to use config
     #[cfg(feature = "system_state")]
     expand_paths!(
         (
@@ -80,6 +94,22 @@ pub async fn runs_app(addr: &str, port: Option<u16>) -> results::ExtendedResult<
         ),
     );
 
+    #[cfg(feature = "shellyv1")]
+    let device = Arc::new(
+        shellyv1::devices::Shelly1::<false>::new(
+            Url::parse("http://yoururl").unwrap(),
+            Some(BasicAuthentication::new("username", Some("password"))),
+        )
+        .unwrap(),
+    );
+
+    #[cfg(feature = "shellyv1")]
+    expand_paths!((
+        // TESTING ONLY
+        "/testlight",
+        hooks::ShellyV1Hook::new(Arc::clone(&app_state), Arc::clone(&device), false,)
+    ));
+
     // Now we switch between the eternal coroutines:
     // - The HTTP host,
     // - The background loop to update the `SystemState`, and
@@ -92,6 +122,14 @@ pub async fn runs_app(addr: &str, port: Option<u16>) -> results::ExtendedResult<
         result = feature_gated!(
             "system_state" => system_state_task(
                 Arc::clone(&system_state),
+                Duration::from_secs(config::SYSTEM_STATE_REFRESH_RATE),
+            )
+        ) => {
+            return result
+        },
+        result = feature_gated!(
+            "shellyv1" => shellyv1_task(
+                Arc::clone(&device),
                 Duration::from_secs(config::SYSTEM_STATE_REFRESH_RATE),
             )
         ) => {

@@ -1,12 +1,25 @@
 use serde::{Deserialize, Serialize};
 
-use async_iot_models::traits::RequestTransformer;
+use crate::traits::RequestTransformer;
 
 #[allow(dead_code)]
 #[derive(Clone, Serialize, Deserialize)]
 pub struct BasicAuthentication {
     username: String,
     password: Option<String>,
+}
+
+impl BasicAuthentication {
+    pub fn new<U, P>(username: U, password: Option<P>) -> Self
+    where
+        U: ToString,
+        P: ToString,
+    {
+        Self {
+            username: username.to_string(),
+            password: password.map(|p| p.to_string()),
+        }
+    }
 }
 
 impl RequestTransformer for BasicAuthentication {

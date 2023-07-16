@@ -1,3 +1,5 @@
+pub mod auth;
+
 pub mod config;
 
 mod error;
