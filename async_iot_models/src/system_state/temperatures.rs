@@ -7,7 +7,23 @@ use super::SystemState;
 use crate::{results, traits::FromWithKey};
 
 #[cfg(target_os = "linux")]
+use serde::Deserializer;
+
+#[cfg(target_os = "linux")]
 use serde_json::value::Map;
+
+#[cfg(target_os = "linux")]
+use psutil::sensors;
+
+#[cfg(target_os = "linux")]
+pub(crate) fn deserialize_raw_temperatures<'de, D>(
+    _: D,
+) -> Result<Vec<psutil::Result<sensors::TemperatureSensor>>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    Ok(sensors::temperatures())
+}
 
 /// Get temperatures of this machine.
 pub fn temperatures(key: &str, sys: &SystemState) -> results::ResultJsonEntry {
@@ -40,10 +56,10 @@ fn cpu_temp(sys: &SystemState) -> io::Result<Value> {
 
 /// Internal function to fetch sensors temperature.
 #[cfg(target_os = "linux")]
-fn sensors_temp(sys: &SystemState) -> io::Result<Value> {
+fn sensors_temp(sys: &SystemState) -> Result<Value, String> {
     let mut map = Map::new();
 
-    io::Result::<()>::from_iter(sys.psutil_sensors.iter().map(|item_result| {
+    Result::<(), String>::from_iter(sys.psutil_sensors.iter().map(|item_result| {
         item_result
             .as_ref()
             .map(|item| {
@@ -54,7 +70,7 @@ fn sensors_temp(sys: &SystemState) -> io::Result<Value> {
                     ),
                 );
             })
-            .map_err(|err| io::Error::new(io::ErrorKind::Unsupported, err.to_string()))
+            .map_err(|err| err.to_string())
     }))
     .map(|_| Value::Object(map))
 }

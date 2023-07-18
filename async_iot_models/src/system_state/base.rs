@@ -20,6 +20,9 @@ use super::{
 #[cfg(target_os = "linux")]
 use psutil::{self, sensors};
 
+#[cfg(target_os = "linux")]
+use super::temperatures::deserialize_raw_temperatures;
+
 /// An empty struct that acts as a wrapper for associated functions.
 #[derive(Serialize, Deserialize)]
 pub struct SystemState {
@@ -36,9 +39,7 @@ pub struct SystemState {
 
     #[cfg(target_os = "linux")]
     #[serde(skip_serializing)]
-    #[serde(
-        deserialize_with = "Vec<psutil::Result<sensors::TemperatureSensor>>::deserialize_with"
-    )]
+    #[serde(deserialize_with = "deserialize_raw_temperatures")]
     pub psutil_sensors: Vec<psutil::Result<sensors::TemperatureSensor>>,
 }
 

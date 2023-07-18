@@ -38,14 +38,14 @@ mod implementations {
         }
     }
 
-    #[cfg(target_os = "linux")]
-    impl DeserializeWith for Vec<psutil::Result<sensors::TemperatureSensor>> {
-        fn deserialize_with<'de, D>(_: D) -> Result<Self, D::Error>
-        where
-            Self: Sized,
-            D: Deserializer<'de>,
-        {
-            Ok(sensors::temperatures())
-        }
-    }
+    // #[cfg(target_os = "linux")]
+    // impl DeserializeWith for Vec<psutil::Result<sensors::TemperatureSensor>> {
+    //     fn deserialize_with<'de, D>(_: D) -> Result<Self, D::Error>
+    //     where
+    //         Self: Sized,
+    //         D: Deserializer<'de>,
+    //     {
+    //         Ok(sensors::temperatures())
+    //     }
+    // }
 }
