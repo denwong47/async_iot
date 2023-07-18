@@ -1,12 +1,14 @@
 use async_trait::async_trait;
 use std::sync::RwLock;
 
+use serde::{Deserialize, Serialize};
+
 use sysinfo::{self, SystemExt};
 use systemstat::{self, Platform};
 
 use crate::{
     results,
-    traits::{HasCachedState, HasState},
+    traits::{DeserializeWith, HasCachedState, HasState},
     LocalError,
 };
 
@@ -19,13 +21,24 @@ use super::{
 use psutil::{self, sensors};
 
 /// An empty struct that acts as a wrapper for associated functions.
+#[derive(Serialize, Deserialize)]
 pub struct SystemState {
+    #[serde(skip_serializing)]
+    #[serde(deserialize_with = "systemstat::System::deserialize_with")]
     pub systemstat: systemstat::System,
+
+    #[serde(skip_serializing)]
+    #[serde(deserialize_with = "sysinfo::System::deserialize_with")]
     pub sysinfo: sysinfo::System,
 
+    #[serde(skip)]
     _cache: RwLock<Option<results::ResultJson>>,
 
     #[cfg(target_os = "linux")]
+    #[serde(skip_serializing)]
+    #[serde(
+        deserialize_with = "Vec<psutil::Result<sensors::TemperatureSensor>>::deserialize_with"
+    )]
     pub psutil_sensors: Vec<psutil::Result<sensors::TemperatureSensor>>,
 }
 

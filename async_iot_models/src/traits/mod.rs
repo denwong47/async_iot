@@ -7,6 +7,9 @@ pub use can_get::*;
 mod can_post;
 pub use can_post::*;
 
+mod deserialize_with;
+pub use deserialize_with::*;
+
 mod endpoint;
 pub use endpoint::*;
 
