@@ -20,7 +20,7 @@ pub trait HasState {
     async fn try_all(&self) -> Result<results::ResultJson, LocalError>;
 
     /// Get all the available keys for [`get()`] and [`try_get()`].
-    fn available_keys(&self) -> Vec<&str>;
+    fn available_keys() -> Vec<&'static str>;
 
     /// Get a subset of a state matching the supplied keys.
     async fn get(&self, keys: &[&str]) -> results::ResultJson {
@@ -34,7 +34,7 @@ pub trait HasState {
     async fn all(&self) -> results::ResultJson {
         match self.try_all().await {
             Ok(json) => json,
-            Err(err) => results::ResultJson::from_err(&self.available_keys(), err),
+            Err(err) => results::ResultJson::from_err(&Self::available_keys(), err),
         }
     }
 }
@@ -116,6 +116,6 @@ pub trait HasCachedState: HasState {
     ///
     /// Otherwise, update the data then return it.
     async fn all_cache_or_update(&self) -> Result<results::ResultJson, LocalError> {
-        self.get_cache_or_update(&self.available_keys()).await
+        self.get_cache_or_update(&Self::available_keys()).await
     }
 }

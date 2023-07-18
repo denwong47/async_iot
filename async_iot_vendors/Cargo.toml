@@ -12,10 +12,11 @@ name = "async_iot_vendors"
 path = "src/lib.rs"
 
 [features]
-default = ["async_iot_server", "async_iot_sensors", "shellyv1"]
+default = ["async_iot_server", "async_iot_sensors", "remote_system_state", "shellyv1"]
+pfsense = []
+remote_system_state = []
 shellyv1 = []
 shellyv2 = []
-pfsense = []
 async_iot_server = []
 async_iot_sensors = []
 

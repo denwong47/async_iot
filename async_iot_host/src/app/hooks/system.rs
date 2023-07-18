@@ -58,9 +58,9 @@ where
         let target_keys = if self.subset {
             subset
                 .and_then(|v| if &v == &[""] { None } else { Some(v) })
-                .unwrap_or_else(|| self.state.available_keys())
+                .unwrap_or_else(|| SystemState::available_keys())
         } else {
-            self.state.available_keys()
+            SystemState::available_keys()
         };
 
         Ok(self

@@ -17,10 +17,11 @@ path = "src/main.rs"
 openssl = { version = '0.10', features = ["vendored"]}
 
 [features]
-default = ["system_state"]
-system_state = []
-jsonl_logging = ["async_iot_models/jsonl_logging"]
+default = ["system_state", "remote_system_state"]
 detailed_logging = []
+jsonl_logging = ["async_iot_models/jsonl_logging"]
+remote_system_state = ["async_iot_vendors/remote_system_state"]
+system_state = []
 shellyv1 = ["async_iot_vendors/shellyv1"]
 
 [dependencies]

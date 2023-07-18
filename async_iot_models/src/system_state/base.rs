@@ -95,7 +95,7 @@ macro_rules! expand_fields {
             }
 
             /// Get a [`Vec`] of all the available keys for [`SystemState::get()`].
-            fn available_keys(&self) -> Vec<&str> {
+            fn available_keys() -> Vec<&'static str> {
                 vec![
                     $(
                         stringify!($field),
@@ -106,7 +106,7 @@ macro_rules! expand_fields {
             /// Get a [`results::ResultJson`] with all the available
             /// keys.
             async fn try_all(&self) -> Result<results::ResultJson, LocalError> {
-                self.try_get(&self.available_keys()).await
+                self.try_get(&Self::available_keys()).await
             }
         }
     }

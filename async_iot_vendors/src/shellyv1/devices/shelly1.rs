@@ -70,11 +70,11 @@ macro_rules! expand_fields {
             ///
             /// This method returns a [`Result`], which will be rendered as a [`results::ResultJson`] by [`get()`].
             async fn try_all(&self) -> Result<results::ResultJson, LocalError> {
-                self.try_get(&self.available_keys()).await
+                self.try_get(&Self::available_keys()).await
             }
 
             /// Get all the available keys for [`get()`] and [`try_get()`].
-            fn available_keys(&self) -> Vec<&str> {
+            fn available_keys() -> Vec<&'static str> {
                 vec![$($field,)*]
             }
         }
