@@ -438,6 +438,7 @@ dependencies = [
  "reqwest",
  "serde",
  "serde_json",
+ "serde_with 2.3.3",
  "strum",
  "sysinfo",
  "systemstat",

@@ -4,7 +4,7 @@ use serde::Serialize;
 use serde_json::{self, Value as JsonValue};
 use time;
 
-use super::entry::ResultJsonEntry;
+use super::super::entry::ResultJsonEntry;
 
 use crate::{config, results::ResultState, traits::ResultToOption};
 
