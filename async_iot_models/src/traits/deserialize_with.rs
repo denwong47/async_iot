@@ -14,9 +14,6 @@ mod implementations {
     use sysinfo::{self, SystemExt};
     use systemstat::{self, Platform};
 
-    #[cfg(target_os = "linux")]
-    use psutil::sensors;
-
     use super::*;
 
     impl DeserializeWith for sysinfo::System {
@@ -37,15 +34,4 @@ mod implementations {
             Ok(systemstat::System::new())
         }
     }
-
-    // #[cfg(target_os = "linux")]
-    // impl DeserializeWith for Vec<psutil::Result<sensors::TemperatureSensor>> {
-    //     fn deserialize_with<'de, D>(_: D) -> Result<Self, D::Error>
-    //     where
-    //         Self: Sized,
-    //         D: Deserializer<'de>,
-    //     {
-    //         Ok(sensors::temperatures())
-    //     }
-    // }
 }
