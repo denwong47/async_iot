@@ -1,6 +1,8 @@
 use serde::{Deserialize, Serialize};
 use url::Url;
 
+// TODO Remove
+#[allow(unused_imports)]
 use async_iot_models::{
     auth, end_point_type,
     traits::{self, BuildWith},

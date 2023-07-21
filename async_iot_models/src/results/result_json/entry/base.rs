@@ -102,11 +102,36 @@ impl ResultJsonEntry {
         self.with_children(vec![Self::new_scalar(key, state, value)])
     }
 
+    /// Return [`None`] if this [`ResultJsonEntry`] is scalar, otherwise
+    /// return [`Option<usize>`] indicating the number of children this instance
+    /// contains.
+    pub fn children_count(&self) -> Option<usize> {
+        self.children.as_ref().map(|children| children.len())
+    }
+
+    /// Check if this [`ResultJsonEntry`] contains a scalar value only.
+    pub fn is_scalar(&self) -> bool {
+        self.children_count().is_none()
+    }
+
     /// Chained method for changing the state of this [`ResultJsonEntry`].
     pub fn with_state(mut self, state: ResultState) -> Self {
         self.state = state;
 
         self
+    }
+
+    /// Create a new instance of [`ResultJsonEntry`] from a result, which contains a
+    /// serializable object.
+    pub fn from_result<T, E>(key: &str, value: Result<T, E>) -> Self
+    where
+        Self: FromWithKey<T>,
+        E: ToString,
+    {
+        match value {
+            Ok(value) => Self::from_with_key(key, value),
+            Err(err) => Self::from_err(key, err),
+        }
     }
 
     /// Create a new instance of [`ResultJsonEntry`] from an Error by populating it into all

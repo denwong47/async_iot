@@ -13,6 +13,9 @@ pub enum LocalError {
     #[error("Could not complete a HTTP request: {context}")]
     HTTPRequestFailed { context: String },
 
+    #[error("Could not parse a datetime from text: {text}")]
+    DateTimeParsingError { text: String },
+
     #[error("The URL requested is invalid: {context}")]
     InvalidURL { context: String },
 

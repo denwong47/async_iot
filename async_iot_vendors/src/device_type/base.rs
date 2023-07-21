@@ -1,10 +1,12 @@
 use async_iot_models::system_state::SystemState;
 
+#[allow(unused_imports)]
 use serde::{Deserialize, Serialize};
 
 #[cfg(feature = "shellyv1")]
 use crate::shellyv1;
 
+#[allow(dead_code)]
 pub struct Device {
     kind: String,
     path: String,

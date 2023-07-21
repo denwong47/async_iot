@@ -4,7 +4,7 @@ use serde_json::value::{Number, Value};
 use systemstat::{self, Platform};
 
 use super::SystemState;
-use crate::{results, traits::FromWithKey};
+use crate::results;
 
 #[cfg(target_os = "linux")]
 use serde::Deserializer;
@@ -29,12 +29,9 @@ where
 pub fn temperatures(key: &str, sys: &SystemState) -> results::ResultJsonEntry {
     results::ResultJsonEntry::new_mapping(key.to_owned(), results::ResultState::Ok).with_children(
         vec![
-            results::ResultJsonEntry::from_with_key(
-                "cpu",
-                cpu_temp(sys).map_err(|err| err.to_string()),
-            ),
+            results::ResultJsonEntry::from_result("cpu", cpu_temp(sys)),
             #[cfg(target_os = "linux")]
-            results::ResultJsonEntry::from_with_key("sensors", sensors_temp(sys)),
+            results::ResultJsonEntry::from_result("sensors", sensors_temp(sys)),
             #[cfg(not(target_os = "linux"))]
             results::ResultJsonEntry::from_err(
                 "sensors",

@@ -3,12 +3,15 @@ use reqwest::Client;
 use std::sync::{Arc, RwLock};
 use url::Url;
 
+// TODO Remove
+#[allow(unused_imports)]
 use async_iot_models::{
     auth, end_point_type, results, system_state,
     traits::{self, BuildWith, CanGet, EndPoint, FromWithKey},
     LocalError,
 };
 
+#[allow(dead_code)]
 pub struct RemoteSystemState {
     _cache: RwLock<Option<results::ResultJson>>,
     auth: Option<auth::BasicAuthentication>,
@@ -29,6 +32,7 @@ impl traits::RequestTransformer for RemoteSystemState {
 }
 
 #[async_trait]
+#[allow(unused_variables)]
 impl traits::HasState for RemoteSystemState {
     async fn try_get(&self, keys: &[&str]) -> Result<results::ResultJson, LocalError> {
         todo!()

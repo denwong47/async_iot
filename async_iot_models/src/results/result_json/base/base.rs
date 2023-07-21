@@ -10,6 +10,7 @@ use crate::{config, results::ResultState, traits::ResultToOption};
 
 #[derive(Clone, Debug, Default)]
 pub struct ResultJson {
+    _timestamp: Option<time::OffsetDateTime>,
     results: Vec<ResultJsonEntry>,
 }
 
@@ -23,6 +24,7 @@ impl ResultJson {
     /// capacity,
     pub fn with_capacity(capacity: usize) -> Self {
         Self {
+            _timestamp: None,
             results: Vec::with_capacity(capacity),
         }
     }
@@ -33,6 +35,17 @@ impl ResultJson {
         self
     }
 
+    /// Chained method for adding a timestamp to this [`ResultJson`].
+    pub fn with_timestamp(mut self, timestamp: time::OffsetDateTime) -> Self {
+        self._timestamp = Some(timestamp);
+        self
+    }
+
+    /// Get the timestamp of this [`ResultJson`].
+    pub fn timestamp(&self) -> Option<&time::OffsetDateTime> {
+        self._timestamp.as_ref()
+    }
+
     /// Return a [`ResultJson`] down with only the included keys.
     ///
     /// # Note
@@ -40,6 +53,7 @@ impl ResultJson {
     /// Any keys not present in the instance are ignored.
     pub fn get(&self, keys: &[&str]) -> Self {
         Self {
+            _timestamp: None,
             results: self
                 .results
                 .iter()
@@ -129,7 +143,9 @@ impl Serialize for ResultJson {
     where
         S: serde::Serializer,
     {
-        let _timestamp = time::OffsetDateTime::now_utc()
+        let _timestamp = self
+            ._timestamp
+            .unwrap_or_else(|| time::OffsetDateTime::now_utc())
             .format(&config::DATETIME_FORMAT)
             .to_option();
 
